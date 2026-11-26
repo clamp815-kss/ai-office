@@ -1,0 +1,3054 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>현우 AI 오피스 · 3D &amp; 2D 도트 멀티 에이전트</title>
+<meta name="description" content="3D·2D 도트로 전환되는 멀티 에이전트 AI 오피스. 에이전트 초대, 실시간 터미널, 회의실, 공유 메모·파일함.">
+<meta name="theme-color" content="#100f0e">
+<meta property="og:title" content="현우 AI 오피스 · 3D & 2D 도트">
+<meta property="og:description" content="3D 아이소메트릭 오피스와 16-bit 도트 오피스를 오가며 에이전트를 초대하고 지휘하는 멀티 에이전트 웹앱.">
+<meta property="og:type" content="website">
+<style>
+:root{
+  --bg:#100f0e; --bg2:#141210; --panel:#1a1714; --panel2:#201c18; --panel3:#262119;
+  --line:#2c2621; --line2:rgba(255,255,255,.075); --line3:rgba(255,255,255,.04);
+  --text:#f2eade; --muted:#a89a8b; --dim:#7b7066;
+  --accent:#f6d6a8; --accent2:#e6ab6b; --accent3:#ffdcb0;
+  --ok:#79d3a2; --info:#67c8ff; --warn:#f0c469; --danger:#ef8a7a; --violet:#c39bff;
+  --r:16px;
+  --font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic","Noto Sans KR","Noto Sans CJK KR","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"D2Coding","Menlo","DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  margin:0;color:var(--text);font-family:var(--font);font-size:14px;line-height:1.45;overflow-x:hidden;
+  background:
+    radial-gradient(1200px 700px at 14% -12%,rgba(126,88,52,.22),transparent 62%),
+    radial-gradient(900px 620px at 94% -4%,rgba(70,96,128,.16),transparent 58%),
+    var(--bg);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+button,input,select,textarea{font-family:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#3a332c;border-radius:99px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:#4a4139;background-clip:padding-box;border:2px solid transparent}
+::-webkit-scrollbar-track{background:transparent}
+.hidden{display:none!important}
+.app{display:flex;flex-direction:column;height:100dvh;max-height:100dvh;overflow:hidden}
+
+/* ---------- top bar ---------- */
+.topbar{
+  display:flex;align-items:center;gap:14px;padding:10px 18px;position:sticky;top:0;z-index:70;
+  background:linear-gradient(180deg,rgba(23,20,17,.97),rgba(16,15,14,.95));
+  border-bottom:1px solid var(--line2);backdrop-filter:blur(14px);
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{
+  width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;
+  background:linear-gradient(160deg,#2e2721,#191614);border:1px solid rgba(246,214,168,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 6px 16px rgba(0,0,0,.45);color:var(--accent);
+}
+.brand-mark svg{width:22px;height:22px}
+.brand h1{margin:0;font-size:16px;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
+.brand-meta{display:flex;align-items:center;gap:6px;margin-top:2px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);display:inline-block}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:99px;
+  background:rgba(255,255,255,.035);border:1px solid var(--line2);font-size:11px;color:#cbbdaf;white-space:nowrap;
+}
+.chip b{color:#f4e8d6;font-weight:700}
+.chip.mono{font-family:var(--mono);letter-spacing:.02em}
+.spacer{flex:1}
+
+.seg{display:flex;gap:3px;padding:3px;border-radius:12px;background:#171411;border:1px solid var(--line2)}
+.seg button{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:9px;font-size:12.5px;
+  font-weight:700;color:#b6a898;white-space:nowrap;transition:.15s;
+}
+.seg button:hover{color:#f0e3d2;background:rgba(255,255,255,.04)}
+.seg button.on{
+  color:#2a1d10;background:linear-gradient(180deg,#f8dcb4,#e9b97c);
+  box-shadow:0 4px 12px rgba(233,185,124,.28),inset 0 1px 0 rgba(255,255,255,.5);
+}
+.seg button .k{font-size:10px;opacity:.5;font-family:var(--mono)}
+
+.avatars{display:flex;align-items:center}
+.av{
+  width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;
+  border:2px solid #17140f;margin-left:-7px;box-shadow:0 2px 6px rgba(0,0,0,.4);color:#231a10;
+}
+.av:first-child{margin-left:0}
+.av.more{background:#2a241e;color:#cbbdaf;font-size:10px;font-family:var(--mono)}
+
+.btn{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:10px;font-size:12.5px;font-weight:700;
+  background:rgba(255,255,255,.05);border:1px solid var(--line2);color:#ddcfbe;transition:.15s;white-space:nowrap;
+}
+.btn:hover{background:rgba(255,255,255,.09);color:#fff}
+.btn.primary{
+  background:linear-gradient(180deg,#f8d9af,#e3ae72);color:#2a1c0e;border-color:transparent;
+  box-shadow:0 4px 14px rgba(227,174,114,.25),inset 0 1px 0 rgba(255,255,255,.5);
+}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:5px 9px;font-size:11.5px;border-radius:8px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+
+/* ---------- sub bar ---------- */
+.subbar{display:flex;align-items:center;gap:9px;padding:8px 18px;border-bottom:1px solid var(--line3);background:rgba(18,16,14,.6)}
+.subbar h2{margin:0;font-size:13px;font-weight:800;letter-spacing:-.01em}
+.subbar .hint{font-size:11.5px;color:var(--dim)}
+main{flex:1 1 0;display:flex;min-height:0;overflow:hidden}
+
+/* ---------- views ---------- */
+.view{display:none;flex:1 1 0;min-height:0;width:100%;overflow:hidden}
+.view.on{display:flex;flex-direction:column}
+
+/* ---------- stage (3D / 2D) ---------- */
+.stage{position:relative;flex:1 1 0;min-height:0;overflow:hidden;background:#0b0a09}
+.stage canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;inset:0;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud-tl{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:8px;max-width:min(46vw,430px)}
+.hud-tr{position:absolute;right:14px;top:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.hud-bl{position:absolute;left:14px;bottom:14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.card{
+  background:linear-gradient(180deg,rgba(30,26,22,.93),rgba(22,19,16,.93));
+  border:1px solid var(--line2);border-radius:13px;padding:10px 12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.45);backdrop-filter:blur(12px);
+}
+.card h3{margin:0 0 6px;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.legend{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:11px;color:#c9baa9}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:7px;height:7px;border-radius:2px;display:inline-block}
+.ctl{display:flex;gap:5px;flex-wrap:wrap}
+.ctl button{
+  width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:13px;
+  background:rgba(28,24,20,.9);border:1px solid var(--line2);color:#d7c9b8;
+}
+.ctl button:hover{background:rgba(255,255,255,.1);color:#fff}
+.ctl button.wide{width:auto;padding:0 10px;font-size:11.5px;font-weight:700;gap:5px;display:inline-flex}
+
+.agentcard{width:250px}
+.agentcard .who{display:flex;align-items:center;gap:9px}
+.agentcard .who .av{width:32px;height:32px;font-size:14px;border:0;margin:0}
+.agentcard .nm{font-weight:800;font-size:13.5px}
+.agentcard .rl{font-size:11px;color:var(--muted)}
+.agentcard .st{margin-top:8px;font-size:11.5px;color:#cdbfae;display:flex;align-items:center;gap:6px}
+.agentcard .acts{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}
+
+/* ---------- bottom dock terminal ---------- */
+.dock{
+  border-top:1px solid var(--line2);background:#0c0b0a;
+  display:flex;flex-direction:column;height:212px;flex:0 0 212px;transition:height .18s;min-height:0;
+}
+.dock.min{height:38px;flex-basis:38px}
+.term{display:flex;flex-direction:column;min-height:0;height:100%;background:#0b0a09}
+.term-head{
+  display:flex;align-items:center;gap:8px;padding:0 12px;height:38px;flex:0 0 38px;
+  border-bottom:1px solid var(--line3);background:#11100e;
+}
+.term-head .t{font-size:11.5px;font-weight:800;letter-spacing:.04em;color:#cbbdaf;display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.term-head .led{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.term-head .led.busy{background:var(--warn);box-shadow:0 0 8px var(--warn);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.term-head .sp{flex:1}
+.term-log{
+  flex:1;overflow-y:auto;padding:8px 12px 4px;font-family:var(--mono);font-size:11.5px;line-height:1.55;
+  color:#bfb4a6;scroll-behavior:smooth;
+}
+.term-log .ln{white-space:pre-wrap;word-break:break-word}
+.term-log .ts{color:#5f574e}
+.term-log .tag{font-weight:700}
+.term-log .t-orc{color:#f6d6a8}.term-log .t-exec{color:#67c8ff}.term-log .t-ok{color:#79d3a2}
+.term-log .t-warn{color:#f0c469}.term-log .t-err{color:#ef8a7a}.term-log .t-hook{color:#c39bff}
+.term-log .t-sys{color:#8d8175}.term-log .t-user{color:#ffe2b8}
+.term-log .bar{color:#79d3a2;letter-spacing:-.5px}
+.term-log .dim{color:#7b7066}
+.term-in{display:flex;align-items:center;gap:7px;padding:6px 12px 8px;border-top:1px solid var(--line3)}
+.term-in .ps{font-family:var(--mono);font-size:11.5px;color:var(--accent2);font-weight:700}
+.term-in input{
+  flex:1;background:transparent;border:0;outline:0;font-family:var(--mono);font-size:11.5px;color:#f2e6d6;padding:5px 0;
+}
+.term-in input::placeholder{color:#5f574e}
+
+/* ---------- terminal full view ---------- */
+.termfull{flex:1 1 0;display:flex;min-height:0;gap:0;overflow:hidden}
+.termfull .term{flex:1;min-width:0}
+.termfull .side{
+  width:290px;flex:0 0 290px;border-left:1px solid var(--line2);background:#121110;padding:12px;overflow-y:auto;
+}
+.side h4{margin:0 0 8px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.side .row{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.05)}
+.side .row b{font-weight:700;color:#e9dcca}
+.side .kpi{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.side .kpi div{background:#191614;border:1px solid var(--line3);border-radius:10px;padding:8px}
+.side .kpi span{display:block;font-size:10px;color:var(--dim)}
+.side .kpi b{font-size:16px;font-family:var(--mono)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.chips button{
+  font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:7px;background:#1b1815;
+  border:1px solid var(--line2);color:#a99c8d;
+}
+.chips button:hover{color:#f6e7d5;border-color:rgba(246,214,168,.35)}
+
+/* ---------- meeting view ---------- */
+.meet{flex:1 1 0;display:grid;grid-template-columns:268px minmax(0,1fr) 320px;min-height:0;overflow:hidden}
+.meet > section{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--line3);background:rgba(18,16,14,.5)}
+.meet > section:last-child{border-right:0}
+.phead{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line3);flex:0 0 auto}
+.phead h3{margin:0;font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:7px}
+.phead .cnt{font-size:11px;color:var(--dim);margin-left:auto;font-family:var(--mono)}
+
+.botlist{flex:1;overflow-y:auto;padding:7px 8px}
+.bot{
+  display:flex;align-items:center;gap:9px;padding:8px 8px;border-radius:11px;border:1px solid transparent;transition:.15s;
+  cursor:pointer;
+}
+.bot:hover{background:rgba(255,255,255,.035);border-color:var(--line3)}
+.bot.off{opacity:.42}
+.bot .av{width:30px;height:30px;font-size:13px;border:0;margin:0;flex:0 0 auto}
+.bot .info{min-width:0;flex:1}
+.bot .nm{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bot .rl{font-size:10.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:5px;background:#2b241d;color:#c2b2a0;letter-spacing:.02em}
+.tag.sec{background:rgba(246,214,168,.16);color:#f6d6a8}
+.sw{width:34px;height:19px;border-radius:99px;background:#3a332c;position:relative;flex:0 0 auto;transition:.18s}
+.sw:after{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#8b8074;transition:.18s}
+.sw.on{background:linear-gradient(180deg,#f0c489,#d59c5e)}
+.sw.on:after{left:17px;background:#2a1c0e}
+.pfoot{padding:8px 11px;border-top:1px solid var(--line3);font-size:10.5px;color:var(--dim);line-height:1.5}
+
+.roomtabs{display:flex;gap:5px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line3);flex:0 0 auto;flex-wrap:wrap}
+.roomtab{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:9px;font-size:12px;font-weight:700;
+  color:#a8998a;border:1px solid transparent;
+}
+.roomtab:hover{color:#e8d9c6;background:rgba(255,255,255,.04)}
+.roomtab.on{color:#f8e6cf;background:#241f19;border-color:var(--line2);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.roomtabs .meta{margin-left:auto;font-size:11px;color:var(--dim);display:flex;gap:8px;align-items:center}
+
+.msgs{flex:1;overflow-y:auto;padding:14px 16px 8px;display:flex;flex-direction:column;gap:9px}
+.daydiv{text-align:center;color:#6f665c;font-size:10.5px;margin:6px 0 4px}
+.msg{display:flex;gap:9px;max-width:min(760px,92%)}
+.msg .av{width:28px;height:28px;font-size:12px;border:0;margin:0;flex:0 0 auto}
+.msg .body{min-width:0}
+.msg .who{display:flex;align-items:baseline;gap:6px;margin-bottom:3px}
+.msg .who b{font-size:12px}
+.msg .who span{font-size:10px;color:#6f665c}
+.bubble{
+  background:#221d18;border:1px solid var(--line3);border-radius:3px 12px 12px 12px;padding:8px 11px;
+  font-size:12.5px;line-height:1.5;color:#e6dacb;white-space:pre-wrap;word-break:break-word;
+}
+.msg.user .bubble{background:linear-gradient(180deg,#3a2d1f,#2e241a);border-color:rgba(246,214,168,.18)}
+.msg.sys .bubble{background:transparent;border:1px dashed var(--line2);color:#9c9083;font-size:11.5px}
+.msg.result .bubble{background:rgba(121,211,162,.07);border-color:rgba(121,211,162,.25)}
+.msg.orchestrator .av{background:#f6d6a8;color:#241a0f}
+
+.composer{display:flex;align-items:flex-end;gap:8px;padding:9px 12px 12px;border-top:1px solid var(--line3);flex:0 0 auto}
+.composer .plus{width:34px;height:34px;border-radius:9px;background:#1d1915;border:1px solid var(--line2);color:#cbbdaf;font-size:16px;flex:0 0 auto}
+.composer textarea{
+  flex:1;resize:none;height:38px;max-height:120px;border-radius:11px;background:#171411;border:1px solid var(--line2);
+  padding:9px 12px;font-size:12.5px;line-height:1.4;outline:0;color:#f2e6d6;
+}
+.composer textarea:focus{border-color:rgba(246,214,168,.4)}
+.composer textarea::placeholder{color:#6b6258}
+.send{padding:9px 16px;border-radius:10px;font-weight:800;font-size:12.5px;background:linear-gradient(180deg,#f8d9af,#e3ae72);color:#2a1c0e;flex:0 0 auto}
+
+.notes,.files{display:flex;flex-direction:column;min-height:0}
+.notes{flex:0 0 auto;max-height:46%}
+.notes .list{overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:7px}
+.note{
+  background:#1e1a16;border:1px solid var(--line3);border-radius:10px;padding:8px 10px;font-size:11.5px;
+  color:#ded1c0;line-height:1.5;white-space:pre-wrap;cursor:text;outline:0;
+}
+.note:focus{border-color:rgba(246,214,168,.4);background:#241f19}
+.notes .auto{font-size:9.5px;color:#6b6258;text-align:right;padding:0 12px 8px}
+.files{flex:1;border-top:1px solid var(--line3)}
+.flist{overflow-y:auto;padding:6px 8px;flex:1}
+.file{display:flex;gap:9px;align-items:center;padding:7px 8px;border-radius:10px;cursor:pointer}
+.file:hover{background:rgba(255,255,255,.04)}
+.file .ic{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:#26211b;font-size:13px;flex:0 0 auto}
+.file .nm{font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file .sub{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file .sz{font-size:10px;color:#6b6258;font-family:var(--mono);margin-left:auto;flex:0 0 auto}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);z-index:200;opacity:0;transition:.22s;pointer-events:none}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast .in{
+  background:linear-gradient(180deg,#2b241d,#1d1915);border:1px solid rgba(246,214,168,.28);border-radius:11px;
+  padding:9px 15px;font-size:12.5px;color:#f4e6d4;box-shadow:0 14px 40px rgba(0,0,0,.6);max-width:82vw;
+}
+
+/* ---------- modals ---------- */
+.modal{
+  position:fixed;inset:0;z-index:150;display:none;place-items:center;padding:20px;
+  background:rgba(6,5,4,.66);backdrop-filter:blur(6px);
+}
+.modal.on{display:grid}
+.sheet{
+  width:min(560px,96vw);max-height:88vh;overflow:auto;border-radius:18px;padding:18px 20px 20px;
+  background:linear-gradient(180deg,#201c18,#171411);border:1px solid var(--line2);
+  box-shadow:0 30px 90px rgba(0,0,0,.7);
+}
+.sheet.wide{width:min(720px,96vw)}
+.sheet h2{margin:0 0 3px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
+.sheet p.sub{margin:0 0 14px;font-size:11.5px;color:var(--muted);line-height:1.5}
+.x{position:absolute;right:14px;top:12px;color:#9c9083;font-size:18px;width:30px;height:30px;border-radius:8px}
+.x:hover{background:rgba(255,255,255,.07);color:#fff}
+.sheet{position:relative}
+.field{margin-bottom:11px}
+.field > label{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:800}
+.field input[type=text],.field input[type=url],.field textarea,.field select{
+  width:100%;background:#141210;border:1px solid var(--line2);border-radius:10px;padding:9px 11px;font-size:12.5px;outline:0;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:rgba(246,214,168,.42)}
+.pick{display:flex;gap:5px;flex-wrap:wrap}
+.pick button{
+  padding:6px 10px;border-radius:9px;font-size:11.5px;font-weight:700;background:#1a1714;
+  border:1px solid var(--line2);color:#b9ab9b;
+}
+.pick button.sel{background:linear-gradient(180deg,#f6dcb8,#e4b57c);color:#2a1c0e;border-color:transparent}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.swatches button{width:24px;height:24px;border-radius:50%;border:2px solid transparent}
+.swatches button.sel{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions{display:flex;gap:7px;margin-top:14px;flex-wrap:wrap}
+.actions .btn{flex:1;justify-content:center}
+.codebox{
+  font-family:var(--mono);font-size:10.5px;line-height:1.6;background:#0e0d0c;border:1px solid var(--line2);
+  border-radius:10px;padding:9px 11px;color:#b9d8c4;word-break:break-all;white-space:pre-wrap;
+}
+.codebox b{color:#f6d6a8}
+.hintline{font-size:10.5px;color:var(--dim);margin-top:6px;line-height:1.5}
+
+/* ---------- misc ---------- */
+.crt{position:absolute;inset:0;pointer-events:none;mix-blend-mode:overlay;opacity:.5;
+  background:repeating-linear-gradient(180deg,rgba(0,0,0,.35) 0 1px,transparent 1px 3px)}
+.crt.off{display:none}
+.pixelwrap{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(70% 70% at 50% 40%,#191532,#0a0912 78%)}
+.pixelwrap canvas{
+  image-rendering:pixelated;image-rendering:crisp-edges;
+  box-shadow:0 0 0 2px #2a2340,0 0 0 6px #171325,0 26px 70px rgba(0,0,0,.7),0 0 60px rgba(120,90,200,.16);
+  border-radius:3px;
+}
+.badge-px{
+  position:absolute;left:14px;top:14px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+  color:#c9b6ff;background:rgba(30,22,54,.8);border:1px solid rgba(160,130,255,.3);padding:5px 9px;border-radius:7px;
+}
+.fps{font-family:var(--mono);font-size:10px;color:#6f665c}
+
+@media (max-width:1180px){
+  .meet{grid-template-columns:230px minmax(0,1fr) 280px}
+  .agentcard{width:220px}
+}
+@media (max-width:980px){
+  .brand-meta{display:none}
+  .termfull .side{display:none}
+  .meet{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+  .meet > section{border-right:0;border-bottom:1px solid var(--line3)}
+  .botlist{max-height:168px}
+  .notes{max-height:none}
+  .hud-tl{max-width:58vw}
+  .dock{height:170px;flex-basis:170px}
+}
+@media (max-width:720px){
+  .topbar{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .seg{order:4;width:100%;justify-content:space-between;margin-top:2px}
+  .seg button{flex:1;justify-content:center;padding:7px 2px;font-size:10.5px;gap:3px}
+  .seg button .k{display:none}
+  .brand{flex:1 1 auto;min-width:0}
+  .brand h1{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand-mark{width:32px;height:32px;border-radius:9px}
+  .brand-mark svg{width:18px;height:18px}
+  .spacer{display:none}
+  .avatars{display:none}
+  #clock{display:none}
+  #onCount{padding:3px 7px}
+  .topbar .btn{padding:6px 9px;font-size:11px}
+  .topbar .btn.primary{padding:6px 10px}
+  .subbar{padding:7px 10px;gap:6px}
+  .subbar .hint{display:none}
+  .subbar .chip:not(#liveCount){display:none}
+  .hud-tl{display:none}
+  .hud-tr{right:8px;top:8px}
+  .ctl{gap:4px}
+  .ctl button{width:29px;height:29px;font-size:12px;border-radius:8px}
+  .ctl button.wide{padding:0 7px;font-size:10.5px}
+  .agentcard{display:none!important}
+  .meet{grid-template-rows:auto minmax(0,1fr) auto}
+  .notes{display:none}
+  .hud-bl{left:8px;bottom:8px;gap:4px}
+  .hud-bl .btn{padding:5px 8px;font-size:10.5px}
+  .dock{height:150px;flex-basis:150px}
+  .meet > section:last-child{display:none}
+  .pfoot{display:none}
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21h18M5 21V8l7-4 7 4v13"/><path d="M9 21v-5h6v5"/><path d="M9 11h1.5M13.5 11H15M9 8h6"/>
+        </svg>
+      </div>
+      <div>
+        <h1>현우 AI 오피스</h1>
+        <div class="brand-meta">
+          <span class="chip"><span class="dot"></span> 현우님 전용</span>
+          <span class="chip mono">3D · 2D 도트</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="seg" id="segBtns" aria-label="뷰 전환">
+      <button data-view="v3d" class="on">🧊 3D 오피스</button>
+      <button data-view="v2d">👾 2D 도트</button>
+      <button data-view="meet">💬 회의실</button>
+      <button data-view="term">💻 터미널</button>
+    </nav>
+
+    <div class="spacer"></div>
+
+    <div class="avatars" id="agentStrip"></div>
+    <span class="chip" id="onCount"><b>0</b> ON</span>
+    <button class="btn" id="btnLink" title="오피스 초대 주소 만들기">🔗 초대 주소</button>
+    <button class="btn primary" id="btnInvite">＋ 에이전트 초대</button>
+    <span class="chip mono" id="clock">--:--:--</span>
+  </header>
+
+  <div class="subbar">
+    <h2 id="subTitle">본부 오피스</h2>
+    <span class="hint" id="subHint">드래그로 회전 · 휠로 줌 · 우클릭(Shift+드래그)으로 이동 · 봇을 클릭해 보세요</span>
+    <span class="spacer"></span>
+    <span class="chip"><span class="dot"></span> 3개 방 가동</span>
+    <span class="chip" id="liveCount">👥 0명 ON</span>
+    <span class="chip mono" id="fpsChip">60fps</span>
+  </div>
+
+  <main>
+    <!-- ================= 3D ================= -->
+    <section class="view on" id="v3d">
+      <div class="stage" id="stage3d">
+        <canvas id="c3d"></canvas>
+        <div class="hud">
+          <div class="hud-tl">
+            <div class="card">
+              <h3>3D 오피스 · LIVE</h3>
+              <div class="legend">
+                <span><i style="background:#f6d6a8"></i>지휘실</span>
+                <span><i style="background:#67c8ff"></i>대회의실</span>
+                <span><i style="background:#79d3a2"></i>워크스테이션</span>
+                <span><i style="background:#c39bff"></i>라운지</span>
+              </div>
+            </div>
+          </div>
+          <div class="hud-tr">
+            <div class="card agentcard" id="card3d">
+              <div class="who">
+                <div class="av" style="background:#f6d6a8">🛰️</div>
+                <div><div class="nm">우리엘</div><div class="rl">총괄 · 오케스트레이터</div></div>
+              </div>
+              <div class="st"><span class="dot"></span> 지휘실 · 작업 중</div>
+              <div class="acts">
+                <button class="btn sm" data-go="meeting">대회의실로</button>
+                <button class="btn sm" data-go="work">자리로</button>
+                <button class="btn sm" data-go="lounge">라운지로</button>
+              </div>
+            </div>
+            <div class="ctl">
+              <button id="zIn" title="줌 인">＋</button>
+              <button id="zOut" title="줌 아웃">－</button>
+              <button id="rotL" title="좌회전">⟲</button>
+              <button id="rotR" title="우회전">⟳</button>
+              <button id="resetCam" class="wide" title="시점 초기화">⤾ 리셋</button>
+              <button id="tglLabels" class="wide" title="이름표">🏷 이름표</button>
+            </div>
+          </div>
+          <div class="hud-bl">
+            <button class="btn sm" id="btnMeetAll">🏛 전원 대회의실 소집</button>
+            <button class="btn sm" id="btnDock3d">⌨ 터미널 접기</button>
+          </div>
+        </div>
+      </div>
+      <div class="dock" id="dock3d">
+        <div class="term" data-term="dock">
+          <div class="term-head">
+            <span class="t"><span class="led" data-led></span> ORCHESTRATOR TERMINAL</span>
+            <span class="chip mono" style="margin-left:6px" data-termstat>idle</span>
+            <span class="sp"></span>
+            <button class="btn sm" data-termclear>clear</button>
+          </div>
+          <div class="term-log" data-log></div>
+          <div class="term-in">
+            <span class="ps">office:~$</span>
+            <input data-cmd placeholder="help · status · run 디자인 시안 정리 · invite 루나 디자이너 · link" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 2D ================= -->
+    <section class="view" id="v2d">
+      <div class="stage" id="stage2d">
+        <div class="pixelwrap" id="pixwrap"><canvas id="c2d" width="512" height="352"></canvas></div>
+        <div class="crt" id="crtFx"></div>
+        <div class="badge-px" id="pxBadge">PIXEL MODE · 16-BIT · 60FPS</div>
+        <div class="hud">
+          <div class="hud-tr">
+            <div class="ctl">
+              <button id="pxZoom" class="wide" title="확대/축소">⤢ 2×</button>
+              <button id="pxCrt" class="wide" title="CRT 스캔라인">📺 CRT</button>
+              <button id="pxScan" class="wide" title="전체 보기">⛶ 맞춤</button>
+            </div>
+          </div>
+          <div class="hud-bl">
+            <button class="btn sm" id="btnDock2d">⌨ 터미널 접기</button>
+          </div>
+        </div>
+      </div>
+      <div class="dock" id="dock2d">
+        <div class="term" data-term="dock2">
+          <div class="term-head">
+            <span class="t"><span class="led" data-led></span> PIXEL OFFICE TERMINAL</span>
+            <span class="chip mono" style="margin-left:6px" data-termstat>idle</span>
+            <span class="sp"></span>
+            <button class="btn sm" data-termclear>clear</button>
+          </div>
+          <div class="term-log" data-log></div>
+          <div class="term-in">
+            <span class="ps">office:~$</span>
+            <input data-cmd placeholder="run 새 랜딩페이지 기획 · invite 카일 리서치 · agents" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= MEETING ================= -->
+    <section class="view" id="meet">
+      <div class="meet">
+        <section>
+          <div class="phead">
+            <h3>🤖 봇 ON/OFF</h3>
+            <span class="cnt" id="botCount">0/0 켜짐</span>
+            <button class="btn sm" id="btnAllOn">전체 ON</button>
+          </div>
+          <div class="botlist" id="botList"></div>
+          <div class="pfoot">끈 봇은 회의에서 답하지 않아요.<br>1:1 지시(<b>@이름</b>)는 그대로 갑니다.</div>
+        </section>
+
+        <section>
+          <div class="roomtabs" id="roomTabs">
+            <button class="roomtab on" data-room="meeting">🏛️ 대회의실</button>
+            <button class="roomtab" data-room="command">💙 지휘실</button>
+            <button class="roomtab" data-room="lounge">☕ 라운지</button>
+            <div class="meta"><span id="roomMeta">응답 0명</span><span>공유중</span></div>
+          </div>
+          <div class="msgs" id="msgs"></div>
+          <div class="composer">
+            <button class="plus" id="btnPlus" title="빠른 명령">＋</button>
+            <textarea id="meetInput" rows="1" placeholder="대장님, 지시를 입력하세요 (예: 수원시 3D 시안 마감 상향 알려줘)"></textarea>
+            <button class="send" id="btnSend">보내기</button>
+          </div>
+        </section>
+
+        <section>
+          <div class="phead"><h3>📝 공유 메모</h3><button class="btn sm" id="btnNote">＋ 메모</button></div>
+          <div class="notes">
+            <div class="list" id="noteList"></div>
+            <div class="auto">자동 저장 · 이 브라우저에만</div>
+          </div>
+          <div class="files">
+            <div class="phead"><h3>📁 공유 파일함</h3><span class="cnt" id="fileCount">0개</span></div>
+            <div class="flist" id="fileList"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ================= TERMINAL ================= -->
+    <section class="view" id="term">
+      <div class="termfull">
+        <div class="term" data-term="full">
+          <div class="term-head">
+            <span class="t"><span class="led" data-led></span> MULTI-AGENT OFFICE · TERMINAL SESSION</span>
+            <span class="chip mono" style="margin-left:6px" data-termstat>idle</span>
+            <span class="sp"></span>
+            <span class="chip mono">PTY 0 · 80×32</span>
+            <button class="btn sm" data-termclear>clear</button>
+          </div>
+          <div class="term-log" data-log></div>
+          <div class="chips" id="cmdChips" style="padding:6px 12px 0">
+            <button data-cmd-chip="help">help</button>
+            <button data-cmd-chip="status">status</button>
+            <button data-cmd-chip="agents">agents</button>
+            <button data-cmd-chip="run 새 랜딩페이지 기획">run …</button>
+            <button data-cmd-chip="invite 루나 디자이너">invite …</button>
+            <button data-cmd-chip="link">link</button>
+          </div>
+          <div class="term-in">
+            <span class="ps">office:~$</span>
+            <input data-cmd placeholder="명령을 입력하세요 — help 로 전체 목록" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+        <aside class="side">
+          <h4>오피스 상태</h4>
+          <div class="kpi">
+            <div><span>근무 중</span><b id="kOn">0</b></div>
+            <div><span>작업 큐</span><b id="kQueue">0</b></div>
+            <div><span>메시지</span><b id="kMsg">0</b></div>
+            <div><span>파일</span><b id="kFile">0</b></div>
+          </div>
+          <h4>에이전트</h4>
+          <div id="sideAgents"></div>
+          <h4 style="margin-top:14px">방별 인원</h4>
+          <div id="sideRooms"></div>
+          <h4 style="margin-top:14px">웹훅</h4>
+          <div class="codebox" style="font-size:9.5px" id="sideHook">—</div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ======= 초대 모달 ======= -->
+<div class="modal" id="mInvite">
+  <div class="sheet">
+    <button class="x" data-close>✕</button>
+    <h2>＋ 에이전트 초대</h2>
+    <p class="sub">이름·역할·색을 고르면 입구로 걸어 들어와 자리에 합류합니다. 초대 즉시 오피스에 반영됩니다.</p>
+    <div class="row2">
+      <div class="field"><label>이름</label><input type="text" id="ivName" placeholder="예: 루나" maxlength="12"></div>
+      <div class="field"><label>입장 방</label>
+        <select id="ivRoom">
+          <option value="work">워크스테이션 (자리)</option>
+          <option value="meeting">대회의실</option>
+          <option value="lounge">라운지</option>
+          <option value="command">지휘실</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>역할</label><div class="pick" id="ivRoles"></div></div>
+    <div class="field"><label>커스텀 역할 설명 (선택)</label><input type="text" id="ivDesc" placeholder="예: 영상 편집 · 숏폼 제작"></div>
+    <div class="field"><label>컬러</label><div class="swatches" id="ivColors"></div></div>
+    <div class="actions">
+      <button class="btn primary" id="ivGo">입장시키기</button>
+      <button class="btn" id="ivUrl">🔗 이 설정으로 초대 URL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= 초대 주소 생성기 ======= -->
+<div class="modal" id="mLink">
+  <div class="sheet wide">
+    <button class="x" data-close>✕</button>
+    <h2>🔗 오피스 초대 주소</h2>
+    <p class="sub">이 주소를 열면 <b>설정 그대로</b> 에이전트가 입구로 걸어 들어옵니다. 외부 AI·웹훅·API 에이전트도 아래 주소로 연결할 수 있습니다.</p>
+
+    <div class="row2">
+      <div class="field"><label>에이전트 이름</label><input type="text" id="lkName" value="제미나이" maxlength="12"></div>
+      <div class="field"><label>역할</label><input type="text" id="lkRole" value="리서치"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>입장 방</label>
+        <select id="lkRoom">
+          <option value="meeting">대회의실</option>
+          <option value="work" selected>워크스테이션 (자리)</option>
+          <option value="lounge">라운지</option>
+          <option value="command">지휘실</option>
+        </select>
+      </div>
+      <div class="field"><label>컬러</label><div class="swatches" id="lkColors"></div></div>
+    </div>
+
+    <div class="field">
+      <label>초대 URL (이 주소를 열면 자동 입장)</label>
+      <div class="codebox" id="lkUrl">—</div>
+      <div class="actions" style="margin-top:9px">
+        <button class="btn primary" id="lkCopy">📋 주소 복사</button>
+        <button class="btn" id="lkTest">▶ 테스트 입장</button>
+        <button class="btn" id="lkQrHint">GitHub Pages 배포 안내</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>웹훅 · API 에이전트 엔드포인트</label>
+      <div class="codebox" id="lkHook">—</div>
+      <div class="hintline">정적 페이지라 서버는 없지만, 이 URL 자체가 엔드포인트입니다. 외부 봇/자동화가 <b>?hook=1&amp;agent=이름&amp;msg=내용</b> 주소를 열면 해당 에이전트가 그 메시지를 말하고 터미널에 <b>WEBHOOK</b> 로그가 남습니다.</div>
+      <div class="actions" style="margin-top:9px">
+        <button class="btn" id="lkHookCopy">📋 웹훅 주소 복사</button>
+        <button class="btn" id="lkHookTest">▶ 웹훅 테스트</button>
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:0">
+      <label>터미널에서도</label>
+      <div class="codebox">invite 루나 디자이너      <span style="color:#5f574e"># 이름 · 역할로 초대</span>
+invite &lt;초대URL 붙여넣기&gt;  <span style="color:#5f574e"># 주소 설정대로 입장</span>
+link                     <span style="color:#5f574e"># 새 초대 주소 발급</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======= 파일 미리보기 ======= -->
+<div class="modal" id="mFile">
+  <div class="sheet wide">
+    <button class="x" data-close>✕</button>
+    <h2 id="fvName">파일</h2>
+    <p class="sub" id="fvMeta">—</p>
+    <div class="codebox" id="fvBody" style="max-height:52vh;overflow:auto"></div>
+  </div>
+</div>
+
+<div id="toast"><div class="in" id="toastIn">완료</div></div>
+
+<script>
+'use strict';
+/* ============================================================
+   CORE — world, layout, pathfinding, agents, simulation
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const TAU = Math.PI * 2;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function shade(hex, k) {
+  let r, g, b;
+  const str = String(hex).trim();
+  const m = str.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (m) { r = +m[1]; g = +m[2]; b = +m[3]; }
+  else {
+    let h = str.replace('#', '');
+    if (h.length === 3) h = h.split('').map(x => x + x).join('');
+    const n = parseInt(h, 16);
+    if (!isFinite(n)) return str;
+    r = (n >> 16) & 255; g = (n >> 8) & 255; b = n & 255;
+  }
+  if (k >= 0) { r = r + (255 - r) * k; g = g + (255 - g) * k; b = b + (255 - b) * k; }
+  else { r = r * (1 + k); g = g * (1 + k); b = b * (1 + k); }
+  return `rgb(${r | 0},${g | 0},${b | 0})`;
+}
+function rgba(hex, a) {
+  let h = String(hex).replace('#', '');
+  if (h.length === 3) h = h.split('').map(x => x + x).join('');
+  const n = parseInt(h, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+const pad2 = n => String(n).padStart(2, '0');
+const hhmm = d => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+const hhmmss = d => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+const todayLabel = () => { const d = new Date(); return `${d.getMonth() + 1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})`; };
+
+/* ---------------- roles ---------------- */
+const ROLES = {
+  '총괄':   { icon: '🛰️', color: '#f6d6a8', desc: '오케스트레이터 · 전체 지휘' },
+  '기획':   { icon: '🗂️', color: '#7aa2ff', desc: '전략 · 로드맵 · 우선순위' },
+  '개발':   { icon: '⌨️', color: '#79d3a2', desc: '구현 · 빌드 · 배포' },
+  '디자인': { icon: '🎨', color: '#c78cff', desc: 'UI · 비주얼 · 시안' },
+  '리서치': { icon: '🔍', color: '#67c8ff', desc: '조사 · 검증 · 자료' },
+  '마케팅': { icon: '📣', color: '#ff9db1', desc: '캠페인 · 카피 · 채널' },
+  '커스텀': { icon: '🤖', color: '#ffb066', desc: '사용자 정의 역할' },
+};
+const PALETTE = ['#f6d6a8', '#ffb066', '#ff9db1', '#c78cff', '#7aa2ff', '#67c8ff', '#79d3a2', '#f0c469', '#b8b1ff', '#9be08a'];
+
+/* ---------------- world layout (metres) ---------------- */
+const W = { w: 16, d: 11, h: 2.8 };
+const ROOMS = [
+  { id: 'meeting', name: '대회의실', x: 0.35, y: 0.35, w: 5.6, d: 4.1, floor: 'slate' },
+  { id: 'command', name: '지휘실',   x: 6.45, y: 0.35, w: 3.6, d: 3.55, floor: 'raised' },
+  { id: 'lounge',  name: '라운지',   x: 10.55, y: 0.35, w: 5.1, d: 4.1, floor: 'rug' },
+];
+const ROOMNAME = { meeting: '대회의실', command: '지휘실', lounge: '라운지', work: '워크스테이션' };
+
+const TABLE = { x: 3.2, y: 2.35, w: 3.2, d: 1.35, h: 0.75 };
+const CMD_DESK = { x: 8.25, y: 2.2, w: 2.7, d: 0.95, h: 0.76 };
+const DESKS = [];
+const DESK_XS = [1.55, 3.95, 6.35, 8.75, 11.15, 13.55];
+[5.92, 8.62].forEach((y, ri) => DESK_XS.forEach((x, ci) => DESKS.push({ id: 'd' + ri + ci, x, y, w: 1.6, d: 0.72, h: 0.74, row: ri, col: ci })));
+const SOFAS = [
+  { x: 13.5, y: 1.15, w: 2.9, d: 0.85 },       // 등받이 북쪽
+  { x: 11.3, y: 2.45, w: 0.85, d: 2.1, vertical: true },
+];
+const BAR = { x: 14.6, y: 3.72, w: 1.9, d: 0.6, h: 1.02 };
+
+/* ---------------- seats ---------------- */
+const SEATS = { meeting: [], lounge: [], work: [], command: [] };
+function mkSeat(kind, id, x, y, facing, extra) {
+  const s = Object.assign({ id, kind, x, y, facing, by: null }, extra || {});
+  SEATS[kind].push(s); return s;
+}
+[[2.35, 1.22, Math.PI / 2], [3.2, 1.22, Math.PI / 2], [4.05, 1.22, Math.PI / 2],
+ [2.35, 3.48, -Math.PI / 2], [3.2, 3.48, -Math.PI / 2], [4.05, 3.48, -Math.PI / 2],
+ [1.1, 2.35, 0], [5.3, 2.35, Math.PI]].forEach((s, i) => mkSeat('meeting', 'm' + i, s[0], s[1], s[2]));
+[[12.6, 1.75, Math.PI / 2], [13.5, 1.75, Math.PI / 2], [14.4, 1.75, Math.PI / 2],
+ [11.95, 2.0, 0], [11.95, 2.95, 0],
+ [14.15, 4.4, -Math.PI / 2], [15.1, 4.4, -Math.PI / 2]].forEach((s, i) => mkSeat('lounge', 'l' + i, s[0], s[1], s[2]));
+DESKS.forEach(d => mkSeat('work', d.id, d.x, d.y + 1.02, -Math.PI / 2, { desk: d }));
+mkSeat('command', 'cmd', CMD_DESK.x, CMD_DESK.y + 1.05, -Math.PI / 2);
+
+/* ---------------- collision ---------------- */
+const BLOCKS = [];
+const blk = (x0, y0, x1, y1) => BLOCKS.push({ x0: Math.min(x0, x1), y0: Math.min(y0, y1), x1: Math.max(x0, x1), y1: Math.max(y0, y1) });
+blk(-1, -1, W.w + 1, 0.3);            // 북벽
+blk(-1, -1, 0.3, W.d + 1);            // 서벽
+blk(W.w - 0.3, -1, W.w + 1, W.d + 1); // 동벽
+blk(-1, 10.72, 7.3, W.d + 1);         // 남벽(도어 갭 7.3~8.7)
+blk(8.7, 10.72, W.w + 1, W.d + 1);
+// 대회의실 유리벽
+blk(5.9, 0.3, 6.12, 1.95); blk(5.9, 3.15, 6.12, 4.5);
+blk(0.3, 4.32, 4.55, 4.54); blk(5.45, 4.32, 6.12, 4.54);
+// 가구
+blk(TABLE.x - TABLE.w / 2 - 0.08, TABLE.y - TABLE.d / 2 - 0.08, TABLE.x + TABLE.w / 2 + 0.08, TABLE.y + TABLE.d / 2 + 0.08);
+blk(CMD_DESK.x - CMD_DESK.w / 2, CMD_DESK.y - CMD_DESK.d / 2, CMD_DESK.x + CMD_DESK.w / 2, CMD_DESK.y + CMD_DESK.d / 2 + 0.15);
+DESKS.forEach(d => blk(d.x - d.w / 2, d.y - d.d / 2, d.x + d.w / 2, d.y + d.d / 2));
+SOFAS.forEach(s => blk(s.x - s.w / 2, s.y - s.d / 2, s.x + s.w / 2, s.y + s.d / 2));
+blk(BAR.x - BAR.w / 2, BAR.y - BAR.d / 2, BAR.x + BAR.w / 2, BAR.y + BAR.d / 2);
+blk(0.42, 0.42, 0.95, 0.95);          // 화분
+blk(10.75, 0.45, 11.25, 0.95);
+blk(9.9, 0.35, 10.05, 1.5);           // 파티션
+blk(3.6, 5.25, 4.6, 5.4);             // 캐비닛
+blk(6.05, 9.15, 6.55, 9.65); blk(9.45, 9.15, 9.95, 9.65);  // 입구 포프
+blk(6.95, 9.85, 7.35, 10.25); blk(10.15, 9.85, 10.55, 10.25); // 화분
+blk(0.55, 9.7, 0.95, 10.1); blk(14.9, 9.7, 15.3, 10.1);     // 스탠드 램프
+
+function inside(x, y, r) {
+  if (x < 0.2 || y < 0.2 || x > W.w - 0.2 || y > W.d + 0.6) return true;
+  for (const b of BLOCKS) if (x > b.x0 - r && x < b.x1 + r && y > b.y0 - r && y < b.y1 + r) return true;
+  return false;
+}
+
+/* ---------------- A* ---------------- */
+const GC = 0.4, GX = Math.ceil(W.w / GC), GY = Math.ceil(W.d / GC);
+const BLOCKGRID = new Uint8Array(GX * GY);
+(function buildGrid() {
+  for (let gy = 0; gy < GY; gy++) for (let gx = 0; gx < GX; gx++) {
+    const x = (gx + 0.5) * GC, y = (gy + 0.5) * GC;
+    BLOCKGRID[gy * GX + gx] = inside(x, y, 0.14) ? 1 : 0;
+  }
+})();
+function los(x0, y0, x1, y1) {
+  const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(2, Math.ceil(d / 0.15));
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    if (inside(lerp(x0, x1, t), lerp(y0, y1, t), 0.13)) return false;
+  }
+  return true;
+}
+function findPath(sx, sy, tx, ty) {
+  const toCell = (x, y) => [clamp(Math.floor(x / GC), 0, GX - 1), clamp(Math.floor(y / GC), 0, GY - 1)];
+  let [sx0, sy0] = toCell(sx, sy); const [tx0, ty0] = toCell(tx, ty);
+  if (!BLOCKGRID[ty0 * GX + tx0] === false) { /* keep */ }
+  if (BLOCKGRID[sy0 * GX + sx0]) { // 현재 위치가 막혔으면 주변 자유칸으로
+    let best = null;
+    for (let r = 1; r <= 3 && !best; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const nx = sx0 + dx, ny = sy0 + dy;
+      if (nx >= 0 && ny >= 0 && nx < GX && ny < GY && !BLOCKGRID[ny * GX + nx]) { best = [nx, ny]; break; }
+    }
+    if (best) { sx0 = best[0]; sy0 = best[1]; } else return [{ x: tx, y: ty }];
+  }
+  const start = sy0 * GX + sx0, goal = ty0 * GX + tx0;
+  if (start === goal) return [{ x: tx, y: ty }];
+  const N = GX * GY;
+  const came = new Int32Array(N).fill(-1), gs = new Float32Array(N).fill(Infinity);
+  const open = [];
+  const push = (i, f) => { open.push({ i, f }); let c = open.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (open[p].f <= open[c].f) break; [open[p], open[c]] = [open[c], open[p]]; c = p; } };
+  const pop = () => { const top = open[0], last = open.pop(); if (open.length) { open[0] = last; let i = 0; for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < open.length && open[l].f < open[m].f) m = l; if (r < open.length && open[r].f < open[m].f) m = r; if (m === i) break; [open[m], open[i]] = [open[i], open[m]]; i = m; } } return top; };
+  const h = i => { const x = i % GX, y = (i / GX) | 0; const dx = Math.abs(x - tx0), dy = Math.abs(y - ty0); return (dx + dy) + (Math.SQRT2 - 2) * Math.min(dx, dy); };
+  gs[start] = 0; push(start, h(start));
+  let found = false;
+  while (open.length) {
+    const cur = pop().i;
+    if (cur === goal) { found = true; break; }
+    const cx = cur % GX, cy = (cur / GX) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = cx + dx, ny = cy + dy;
+      if (nx < 0 || ny < 0 || nx >= GX || ny >= GY) continue;
+      const ni = ny * GX + nx;
+      if (BLOCKGRID[ni]) continue;
+      if (dx && dy && (BLOCKGRID[cy * GX + nx] || BLOCKGRID[ny * GX + cx])) continue;
+      const cost = gs[cur] + (dx && dy ? Math.SQRT2 : 1);
+      if (cost < gs[ni] - 1e-6) { gs[ni] = cost; came[ni] = cur; push(ni, cost + h(ni)); }
+    }
+  }
+  if (!found) return [{ x: tx, y: ty }];
+  const cells = [];
+  let c = goal;
+  while (c !== -1) { cells.push({ x: (c % GX) * GC + GC / 2, y: ((c / GX) | 0) * GC + GC / 2 }); c = came[c]; }
+  cells.reverse();
+  cells[cells.length - 1] = { x: tx, y: ty };
+  // string pulling
+  const out = []; let i = 0;
+  out.push(cells[0]);
+  while (i < cells.length - 1) {
+    let j = cells.length - 1;
+    for (; j > i + 1; j--) if (los(cells[i].x, cells[i].y, cells[j].x, cells[j].y)) break;
+    out.push(cells[j]); i = j;
+  }
+  if (out.length > 1) out.shift();
+  return out;
+}
+
+/* ---------------- state ---------------- */
+const S = {
+  time: 0, view: 'v3d', activeRoom: 'meeting', running: false, taskName: '',
+  agents: [], messages: [], notes: [], files: [], queue: [], log: [],
+  selected: null, hover: null, cameraLocked: false,
+  stats: { tasks: 0, msgs: 0 }, fps: 60, t0: performance.now(), wander: 3,
+};
+
+const SEED = [
+  { name: '우리엘', role: '총괄', tag: '비서', color: '#f6d6a8', seat: 'command', desc: '오피스 총괄 · 지시 분배와 요약' },
+  { name: '오퍼스', role: '기획', tag: '봇', color: '#7aa2ff', seat: 'work', desc: '기획 팀장 · 로드맵과 우선순위' },
+  { name: '뮤즈', role: '디자인', tag: '봇', color: '#c78cff', seat: 'work', desc: '영상 · 사운드 · 비주얼' },
+  { name: '허크', role: '개발', tag: '봇', color: '#79d3a2', seat: 'work', desc: '풀스택 구현과 배포' },
+  { name: '카일', role: '리서치', tag: '봇', color: '#67c8ff', seat: 'work', desc: '시장 조사 · 팩트체크' },
+  { name: '서브포 2호기', role: '개발', tag: '봇', color: '#f0c469', seat: 'work', desc: '상품권 · 쿠폰 수집 봇' },
+  { name: '서브포 3호기', role: '개발', tag: '봇', color: '#9be08a', seat: 'work', desc: '플랫폼 스크래퍼' },
+  { name: '코니', role: '마케팅', tag: '봇', color: '#ff9db1', seat: 'work', desc: '캠페인 · 카피 · 채널 운영' },
+  { name: '모아', role: '커스텀', tag: '봇', color: '#ffb066', seat: 'work', desc: '아카이브 · 콘텐츠 정리' },
+  { name: '루나', role: '디자인', tag: '봇', color: '#b8b1ff', seat: 'work', desc: 'UI 디자인 · 3D 시안' },
+];
+
+function newAgentId() { return 'a' + Math.random().toString(36).slice(2, 8); }
+function freeSeat(kind, preferId) {
+  if (preferId) { const s = SEATS[kind].find(x => x.id === preferId && !x.by); if (s) return s; }
+  const s = SEATS[kind].find(x => !x.by);
+  return s || null;
+}
+function assignSeat(a, kind) {
+  const s = freeSeat(kind);
+  if (!s) return null;
+  s.by = a.id; a.seat = s; a.x = s.x; a.y = s.y; a.facing = s.facing;
+  a.state = kind === 'meeting' ? 'meeting' : kind === 'lounge' ? 'rest' : 'work';
+  a.room = kind === 'work' ? 'work' : kind;
+  return s;
+}
+function addAgent(def, opts = {}) {
+  const roleMeta = ROLES[def.role] || ROLES['커스텀'];
+  const a = {
+    id: newAgentId(), name: def.name, role: def.role || '커스텀', tag: def.tag || '봇',
+    color: def.color || roleMeta.color, icon: def.icon || roleMeta.icon,
+    desc: def.desc || roleMeta.desc, enabled: true, model: def.model || 'sim',
+    x: opts.x ?? 8.0, y: opts.y ?? 10.15, facing: -Math.PI / 2, path: [], walk: 0,
+    state: 'moving', seat: null, room: 'work', bubble: null, typing: 0, anim: Math.random() * 9,
+    since: Date.now(), src: def.src || 'seed',
+  };
+  S.agents.push(a);
+  if (opts.autoSeat !== false) {
+    const kind = opts.seatKind || def.seat || 'work';
+    const sx = a.x, sy = a.y;
+    const seat = assignSeat(a, kind === 'command' ? 'command' : kind === 'meeting' ? 'meeting' : kind === 'lounge' ? 'lounge' : 'work');
+    if (seat) {
+      a.x = sx; a.y = sy; a.state = 'moving'; a.facing = -Math.PI / 2;
+      a.path = findPath(sx, sy, seat.x, seat.y);
+      a.seatTarget = seat;
+    }
+  }
+  return a;
+}
+
+function sitAt(a, seat) {
+  a.seat = seat; seat.by = a.id;
+  a.x = seat.x; a.y = seat.y; a.facing = seat.facing;
+  a.path = []; a.seatTarget = null;
+  a.state = seat.kind === 'meeting' ? 'meeting' : seat.kind === 'lounge' ? 'rest' : 'work';
+  a.room = seat.kind;
+  a.settle = 1;
+}
+function standUp(a) {
+  if (a.seat) { a.seat.by = null; a.seat = null; }
+}
+function walkTo(a, x, y, seat) {
+  standUp(a);
+  a.state = 'moving'; a.seatTarget = seat || null;
+  a.path = findPath(a.x, a.y, x, y);
+  if (!a.path.length) a.path = [{ x, y }];
+}
+function goToRoom(a, roomId) {
+  if (roomId === 'work') {
+    const s = freeSeat('work') || (a.homeSeat && !a.homeSeat.by ? a.homeSeat : null);
+    if (s) walkTo(a, s.x, s.y, s);
+    return;
+  }
+  const s = freeSeat(roomId);
+  if (s) walkTo(a, s.x, s.y, s);
+}
+
+function enableAgent(a, on) {
+  a.enabled = on;
+  if (!on) { standUp(a); a.state = 'idle'; a.path = []; }
+  else if (!a.seat) goToRoom(a, a.homeRoom || 'work');
+}
+
+/* ---------------- simulation ---------------- */
+const IDLE_LINES = {
+  '총괄': ['지시 대기 중입니다.', '큐 3건 · 순차 처리합니다.', '오늘 마감 11:30입니다.'],
+  '기획': ['로드맵 v3 검토 중.', '이번 주 우선순위 정리했습니다.', '요구사항 3건 정리해뒀습니다.'],
+  '개발': ['빌드 통과. 배포 준비 완료.', '테스트 커버리지 84%.', 'PR 리뷰 반영 중.'],
+  '디자인': ['시안 2개 비교 중.', '컬러 토큰 정리 중.', '아이콘 세트 뽑는 중.'],
+  '리서치': ['출처 3건 교차 확인 중.', '경쟁사 5곳 스캔 중.', '트렌드 리포트 초안.'],
+  '마케팅': ['카피 A/B 준비 중.', '이번 주 채널 성과 정리.', '발행 캘린더 확인 중.'],
+  '커스텀': ['자료 정리 중.', '아카이브 동기화 중.', '목록 업데이트 중.'],
+};
+const COFFEE_LINES = ['커피 한 잔 하고 올게요.', '라운지 잠깐 들렀습니다.', '숨 좀 고르고 다시 갑니다.', '여기 커피 괜찮네요.'];
+
+function say(a, text, dur = 4.5) {
+  a.bubble = { text, until: S.time + dur };
+}
+function tick(dt) {
+  S.time += dt;
+  for (const a of S.agents) {
+    a.anim += dt;
+    if (a.bubble && S.time > a.bubble.until) a.bubble = null;
+    if (a.state === 'moving' && a.path.length) {
+      const p = a.path[0];
+      const dx = p.x - a.x, dy = p.y - a.y, d = Math.hypot(dx, dy);
+      const sp = 1.75 * dt;
+      if (d <= sp) {
+        a.x = p.x; a.y = p.y; a.path.shift();
+        if (!a.path.length) {
+          if (a.seatTarget) sitAt(a, a.seatTarget);
+          else { a.state = 'idle'; a.idleUntil = S.time + rnd(1, 2.5); }
+        }
+      } else {
+        a.x += dx / d * sp; a.y += dy / d * sp;
+        const target = Math.atan2(dy, dx);
+        let diff = ((target - a.facing + Math.PI * 3) % TAU) - Math.PI;
+        a.facing += diff * Math.min(1, dt * 9);
+      }
+      a.walk += dt * 7.5;
+    } else if (a.state === 'moving') {
+      if (a.seatTarget) sitAt(a, a.seatTarget); else a.state = 'idle';
+    }
+    if (a.state === 'work') a.typing += dt * 6;
+    if (a.state === 'rest') a.typing += dt * 2;
+    if (a.state === 'meeting') a.typing += dt * 3;
+  }
+  wander(dt);
+}
+
+function wander(dt) {
+  if (S.running) return;
+  S.wander -= dt;
+  if (S.wander > 0) return;
+  S.wander = rnd(4, 8);
+  const pool = S.agents.filter(a => a.enabled && a.role !== '총괄' && (a.state === 'work' || a.state === 'rest'));
+  if (!pool.length) return;
+  const a = pick(pool);
+  if (a.state === 'work' && Math.random() < 0.42) {
+    const s = freeSeat('lounge');
+    if (s) {
+      walkTo(a, s.x, s.y, s);
+      if (Math.random() < 0.5) say(a, pick(COFFEE_LINES), 3.4);
+      setTimeout(() => { if (a.seat && a.seat.kind === 'lounge' && !S.running) { const w = freeSeat('work') || a.homeSeat; if (w) walkTo(a, w.x, w.y, w); } }, rnd(9000, 16000));
+    }
+  } else if (a.state === 'rest' && Math.random() < 0.5) {
+    const s = freeSeat('work') || a.homeSeat;
+    if (s) walkTo(a, s.x, s.y, s);
+  } else if (Math.random() < 0.35) {
+    say(a, pick(IDLE_LINES[a.role] || IDLE_LINES['커스텀']), 3.6);
+  }
+}
+
+/* ---------------- messages / notes / files ---------------- */
+function addMessage(room, kind, o) {
+  const m = Object.assign({ id: 'm' + Math.random().toString(36).slice(2, 8), room, kind, at: Date.now() }, o);
+  S.messages.push(m);
+  if (S.messages.length > 400) S.messages.splice(0, S.messages.length - 400);
+  S.stats.msgs++;
+  emit('messages');
+  return m;
+}
+function addFile(o) {
+  const f = Object.assign({ id: 'f' + Math.random().toString(36).slice(2, 8), at: Date.now(), icon: '📄' }, o);
+  S.files.unshift(f);
+  emit('files'); save(); return f;
+}
+function addNote(text) {
+  const n = { id: 'n' + Math.random().toString(36).slice(2, 8), text: text || '' };
+  S.notes.push(n); emit('notes'); save(); return n;
+}
+
+/* ---------------- persistence ---------------- */
+const LSKEY = 'ghoo.v1';
+function save() {
+  try {
+    localStorage.setItem(LSKEY, JSON.stringify({
+      agents: S.agents.map(a => ({ name: a.name, role: a.role, tag: a.tag, color: a.color, icon: a.icon, desc: a.desc, enabled: a.enabled, seat: a.seat ? a.seat.id : null, room: a.seat ? a.seat.kind : 'work', model: a.model, src: a.src })),
+      messages: S.messages.slice(-60), notes: S.notes, files: S.files.slice(0, 20), stats: S.stats,
+    }));
+  } catch (e) { }
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(LSKEY); if (!raw) return false;
+    const d = JSON.parse(raw); if (!d || !Array.isArray(d.agents) || d.agents.length < 1) return false;
+    S.agents = [];
+    d.agents.forEach(x => {
+      const a = {
+        id: newAgentId(), name: x.name, role: x.role, tag: x.tag || '봇', color: x.color, icon: x.icon,
+        desc: x.desc, enabled: x.enabled !== false, model: x.model || 'sim', x: 8, y: 10.1,
+        facing: -Math.PI / 2, path: [], walk: 0, state: 'idle', seat: null, room: x.room || 'work',
+        bubble: null, typing: 0, anim: 0, src: x.src || 'seed', since: Date.now() - 1e6,
+      };
+      const st = x.seat ? [...SEATS.work, ...SEATS.meeting, ...SEATS.lounge, ...SEATS.command].find(s => s.id === x.seat && !s.by) : null;
+      if (st && a.enabled) {
+        a.seat = st; st.by = a.id; a.x = st.x; a.y = st.y; a.facing = st.facing;
+        a.state = st.kind === 'meeting' ? 'meeting' : st.kind === 'lounge' ? 'rest' : 'work';
+        a.room = st.kind;
+      } else if (!a.enabled) { a.state = 'idle'; }
+      S.agents.push(a);
+    });
+    S.messages = Array.isArray(d.messages) ? d.messages : [];
+    S.notes = Array.isArray(d.notes) ? d.notes : [];
+    S.files = Array.isArray(d.files) ? d.files : [];
+    S.stats = d.stats || S.stats;
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------------- tiny event bus ---------------- */
+const BUS = {};
+function on(ev, fn) { (BUS[ev] = BUS[ev] || []).push(fn); }
+function emit(ev, data) { (BUS[ev] || []).forEach(fn => { try { fn(data); } catch (e) { console.warn(e); } }); }
+
+
+/* ============================================================
+   3D OFFICE — pure canvas perspective renderer (offline, no deps)
+   ============================================================ */
+const C3 = document.getElementById('c3d');
+const ctx3 = C3.getContext('2d');
+const DEFAULT_CAM = { yaw: 0.17, pitch: 0.60, dist: 13.4, tx: 8.0, ty: 5.6, tz: 0.45 };
+const CAM = Object.assign({ fov: 0.96 }, DEFAULT_CAM);
+let V3 = null, CAMPOS = { x: 0, y: 0, z: 0 }, CW = 0, CH = 0;
+let showLabels = true;
+
+const MAT = {
+  wall: '#4a3a2a', wallCap: '#5e4a36', wallIn: '#2c2118',
+  floor: ['#4b3524', '#422d1d', '#523a27', '#47311f'],
+  deskTop: '#7d5636', deskEdge: '#95683f', deskBody: '#4e3826',
+  metal: '#282420', screenFrame: '#14161a',
+  glass: 'rgba(150,205,225,.09)',
+  sofa: '#5e3628', sofaCushion: '#754634', sofaBack: '#4c2b20',
+  slate: '#2b2f36', rug: '#553528',
+};
+
+const TEX = new Map();
+function glowTex(col) {
+  let c = TEX.get('g' + col);
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(64, 64, 1, 64, 64, 63);
+  grd.addColorStop(0, rgba(col, 1)); grd.addColorStop(0.3, rgba(col, 0.42)); grd.addColorStop(1, rgba(col, 0));
+  g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+  TEX.set('g' + col, c); return c;
+}
+function sphereTex(col) {
+  let c = TEX.get('s' + col);
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = 96;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(34, 30, 3, 48, 48, 50);
+  grd.addColorStop(0, shade(col, 0.55)); grd.addColorStop(0.5, col); grd.addColorStop(1, shade(col, -0.55));
+  g.fillStyle = grd; g.beginPath(); g.arc(48, 48, 47, 0, TAU); g.fill();
+  TEX.set('s' + col, c); return c;
+}
+function drawGlow(x, y, r, col, alpha) {
+  ctx3.save(); ctx3.globalAlpha = alpha; ctx3.globalCompositeOperation = 'lighter';
+  ctx3.drawImage(glowTex(col), x - r, y - r, r * 2, r * 2); ctx3.restore();
+}
+
+function resize3() {
+  if (!C3) return;
+  const r = C3.getBoundingClientRect();
+  const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+  CW = Math.max(320, Math.round(r.width || 900));
+  CH = Math.max(260, Math.round(r.height || 500));
+  C3.width = Math.round(CW * dpr); C3.height = Math.round(CH * dpr);
+  ctx3.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function setupCam() {
+  const cp = Math.cos(CAM.pitch), sp = Math.sin(CAM.pitch);
+  const aspectFit = clamp(1.32 / Math.max(0.4, CW / Math.max(1, CH)), 1, 1.85);
+  const D = CAM.dist * aspectFit;
+  CAMPOS = {
+    x: CAM.tx + D * cp * Math.sin(CAM.yaw),
+    y: CAM.ty + D * cp * Math.cos(CAM.yaw),
+    z: CAM.tz + D * sp,
+  };
+  const fx = CAM.tx - CAMPOS.x, fy = CAM.ty - CAMPOS.y, fz = CAM.tz - CAMPOS.z;
+  const fl = Math.hypot(fx, fy, fz);
+  const f = { x: fx / fl, y: fy / fl, z: fz / fl };
+  let rx = -f.y, ry = f.x, rz = 0;
+  const rl = Math.hypot(rx, ry) || 1; rx /= rl; ry /= rl;
+  const u = { x: f.y * rz - f.z * ry, y: f.z * rx - f.x * rz, z: f.x * ry - f.y * rx };
+  const focal = (CH / 2) / Math.tan(CAM.fov / 2);
+  V3 = { p: CAMPOS, f, r: { x: rx, y: ry, z: rz }, u, focal };
+}
+function proj(x, y, z) {
+  if (!V3) return null;
+  const dx = x - CAMPOS.x, dy = y - CAMPOS.y, dz = z - CAMPOS.z;
+  const vz = dx * V3.f.x + dy * V3.f.y + dz * V3.f.z;
+  if (vz < 0.15) return null;
+  const vx = dx * V3.r.x + dy * V3.r.y + dz * V3.r.z;
+  const vy = dx * V3.u.x + dy * V3.u.y + dz * V3.u.z;
+  return { x: CW / 2 + V3.focal * vx / vz, y: CH / 2 - V3.focal * vy / vz, z: vz, s: V3.focal / vz };
+}
+function depthOf(x, y, z) {
+  return (x - CAMPOS.x) * V3.f.x + (y - CAMPOS.y) * V3.f.y + (z - CAMPOS.z) * V3.f.z;
+}
+
+const Q = [], GLASS = [];
+const q = (d, fn) => Q.push({ d, fn });
+
+function poly(pts, fill, stroke, lw) {
+  const pp = [];
+  for (const p of pts) { const s = proj(p[0], p[1], p[2]); if (!s) return; pp.push(s); }
+  ctx3.beginPath(); ctx3.moveTo(pp[0].x, pp[0].y);
+  for (let i = 1; i < pp.length; i++) ctx3.lineTo(pp[i].x, pp[i].y);
+  ctx3.closePath();
+  if (fill) { ctx3.fillStyle = fill; ctx3.fill(); }
+  if (stroke) { ctx3.strokeStyle = stroke; ctx3.lineWidth = lw || 1; ctx3.stroke(); }
+}
+function box(cx, cy, z0, w, d, h, col, o = {}) {
+  const dep = depthOf(cx, cy, z0 + h / 2);
+  if (dep < 0.2) return;
+  q(dep, () => {
+    const x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - d / 2, y1 = cy + d / 2, z1 = z0 + h;
+    if (CAMPOS.y > y1) poly([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]], shade(col, o.south != null ? o.south : 0.03));
+    if (CAMPOS.y < y0) poly([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], shade(col, -0.34));
+    if (CAMPOS.x > x1) poly([[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]], shade(col, -0.14));
+    if (CAMPOS.x < x0) poly([[x0, y0, z0], [x0, y1, z0], [x0, y1, z1], [x0, y0, z1]], shade(col, -0.40));
+    if (o.top !== false) poly([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], shade(col, o.topShade != null ? o.topShade : 0.22));
+  });
+}
+function cyl(cx, cy, z0, r, h, col, n = 14, o = {}) {
+  const dep = depthOf(cx, cy, z0 + h / 2);
+  if (dep < 0.2) return;
+  q(dep, () => {
+    const ring = [];
+    for (let i = 0; i < n; i++) { const a = i / n * TAU; ring.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+    const faces = [];
+    for (let i = 0; i < n; i++) {
+      const a = ring[i], b = ring[(i + 1) % n];
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      const nx = (mx - cx) / r, ny = (my - cy) / r;
+      if (nx * (CAMPOS.x - mx) + ny * (CAMPOS.y - my) <= 0) continue;
+      const br = 0.5 + 0.6 * (nx * 0.25 + ny * 0.62);
+      faces.push({ d: depthOf(mx, my, z0 + h / 2), pts: [[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z0 + h], [a[0], a[1], z0 + h]], c: shade(col, (br - 0.9) * 0.6) });
+    }
+    faces.sort((p, qq) => qq.d - p.d);
+    faces.forEach(f => poly(f.pts, f.c));
+    if (o.top !== false) poly(ring.map(p => [p[0], p[1], z0 + h]), shade(col, 0.32));
+  });
+}
+function sphere(cx, cy, cz, r, col, o = {}) {
+  const p = proj(cx, cy, cz); if (!p) return;
+  q(depthOf(cx, cy, cz) - 0.002, () => {
+    const R = Math.max(1.2, r * p.s);
+    ctx3.drawImage(sphereTex(col), p.x - R, p.y - R, R * 2, R * 2);
+    if (o.rim) { ctx3.beginPath(); ctx3.arc(p.x, p.y, R, 0, TAU); ctx3.strokeStyle = o.rim; ctx3.lineWidth = 0.9; ctx3.stroke(); }
+  });
+}
+function floorDisc(x, y, r, style) {
+  const pts = [];
+  for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r, 0.002]); }
+  poly(pts, style);
+}
+function glowDisc(x, y, r, col, alpha) {
+  const p = proj(x, y, 0.01), e = proj(x + r, y, 0.01);
+  if (!p || !e) return;
+  const R = Math.hypot(e.x - p.x, e.y - p.y);
+  ctx3.save(); ctx3.globalAlpha = alpha; ctx3.globalCompositeOperation = 'lighter';
+  ctx3.translate(p.x, p.y); ctx3.scale(1, Math.max(0.22, Math.sin(CAM.pitch) * 1.05));
+  ctx3.drawImage(glowTex(col), -R, -R, R * 2, R * 2); ctx3.restore();
+}
+function bilerp(a, b, c, d, u, v) {
+  const x = lerp(lerp(a[0], b[0], u), lerp(d[0], c[0], u), v);
+  const y = lerp(lerp(a[1], b[1], u), lerp(d[1], c[1], u), v);
+  const z = lerp(lerp(a[2], b[2], u), lerp(d[2], c[2], u), v);
+  return [x, y, z];
+}
+function panelText(corner, u0, v0, u1, v1, text, sizeM, color, weight = 800, align = 'left') {
+  const anchorU = align === 'left' ? u0 : align === 'right' ? u1 : (u0 + u1) / 2;
+  const p = bilerp(corner[0], corner[1], corner[2], corner[3], anchorU, (v0 + v1) / 2);
+  const s = proj(p[0], p[1], p[2]); if (!s) return;
+  ctx3.save();
+  ctx3.font = `${weight} ${Math.max(5, sizeM * s.s)}px "Noto Sans KR", "Malgun Gothic", sans-serif`;
+  ctx3.fillStyle = color; ctx3.textBaseline = 'middle';
+  ctx3.textAlign = align === 'left' ? 'left' : align === 'right' ? 'right' : 'center';
+  ctx3.fillText(text, s.x, s.y);
+  ctx3.restore();
+}
+
+/* ---------------- floor ---------------- */
+function drawFloor3() {
+  poly([[0, 0, 0], [W.w, 0, 0], [W.w, W.d, 0], [0, W.d, 0]], '#2a1d12');
+  const rows = 22;
+  for (let i = 0; i < rows; i++) {
+    const y0 = i * (W.d / rows), y1 = (y0 + W.d / rows);
+    poly([[0.02, y0, 0.001], [W.w - 0.02, y0, 0.001], [W.w - 0.02, y1, 0.001], [0.02, y1, 0.001]], MAT.floor[i % 4]);
+    poly([[0.02, y0, 0.002], [W.w - 0.02, y0, 0.002], [W.w - 0.02, y0 + 0.014, 0.002], [0.02, y0 + 0.014, 0.002]], 'rgba(0,0,0,.32)');
+    let x = ((i * 3.7) % 2.2);
+    while (x < W.w) {
+      const p = proj(x, y0, 0.003), q2 = proj(x, y1, 0.003);
+      if (p && q2) { ctx3.beginPath(); ctx3.moveTo(p.x, p.y); ctx3.lineTo(q2.x, q2.y); ctx3.strokeStyle = 'rgba(0,0,0,.20)'; ctx3.lineWidth = 0.8; ctx3.stroke(); }
+      x += 2.2 + (i % 3) * 0.7;
+    }
+  }
+  // 대회의실 슬레이트
+  const M = ROOMS[0];
+  poly([[M.x, M.y, 0.004], [M.x + M.w, M.y, 0.004], [M.x + M.w, M.y + M.d, 0.004], [M.x, M.y + M.d, 0.004]], MAT.slate);
+  for (let gx = M.x; gx <= M.x + M.w + 0.01; gx += 0.55) {
+    const a = proj(gx, M.y, 0.005), b = proj(gx, M.y + M.d, 0.005);
+    if (a && b) { ctx3.beginPath(); ctx3.moveTo(a.x, a.y); ctx3.lineTo(b.x, b.y); ctx3.strokeStyle = 'rgba(255,255,255,.055)'; ctx3.lineWidth = 1; ctx3.stroke(); }
+  }
+  for (let gy = M.y; gy <= M.y + M.d + 0.01; gy += 0.55) {
+    const a = proj(M.x, gy, 0.005), b = proj(M.x + M.w, gy, 0.005);
+    if (a && b) { ctx3.beginPath(); ctx3.moveTo(a.x, a.y); ctx3.lineTo(b.x, b.y); ctx3.strokeStyle = 'rgba(255,255,255,.045)'; ctx3.lineWidth = 1; ctx3.stroke(); }
+  }
+  // 지휘실 플랫폼
+  const C = ROOMS[1];
+  box(C.x + C.w / 2, C.y + C.d / 2, 0, C.w, C.d, 0.08, '#3e2c1e');
+  poly([[C.x + 0.08, C.y + C.d - 0.14, 0.084], [C.x + C.w - 0.08, C.y + C.d - 0.14, 0.084], [C.x + C.w - 0.08, C.y + C.d - 0.08, 0.084], [C.x + 0.08, C.y + C.d - 0.08, 0.084]], 'rgba(246,214,168,.18)');
+  // 입구 라운지 포프
+  [[6.3, 9.4], [9.7, 9.4]].forEach(([x, y]) => { cyl(x, y, 0, 0.34, 0.34, '#5b4030', 14); cyl(x, y, 0.34, 0.3, 0.06, '#7a5540', 14); });
+  // 라운지 러그
+  const L = ROOMS[2];
+  poly([[L.x + 0.3, L.y + 0.85, 0.006], [L.x + L.w - 0.3, L.y + 0.85, 0.006], [L.x + L.w - 0.3, L.y + L.d - 0.45, 0.006], [L.x + 0.3, L.y + L.d - 0.45, 0.006]], MAT.rug);
+  poly([[L.x + 0.42, L.y + 0.96, 0.007], [L.x + L.w - 0.42, L.y + 0.96, 0.007], [L.x + L.w - 0.42, L.y + L.d - 0.56, 0.007], [L.x + 0.42, L.y + L.d - 0.56, 0.007]], null, 'rgba(226,192,150,.24)', 2);
+  // 워크스테이션 러너
+  poly([[0.5, 7.28, 0.006], [15.5, 7.28, 0.006], [15.5, 7.62, 0.006], [0.5, 7.62, 0.006]], '#3b2a1d');
+  // 입구 매트
+  poly([[6.9, 10.1, 0.006], [9.1, 10.1, 0.006], [9.1, 10.62, 0.006], [6.9, 10.62, 0.006]], '#463222');
+  const ms = proj(8.0, 10.36, 0.008);
+  if (ms) {
+    ctx3.save(); ctx3.font = `800 ${Math.max(6, 0.12 * ms.s)}px var(--mono, monospace)`;
+    ctx3.fillStyle = 'rgba(246,214,168,.55)'; ctx3.textAlign = 'center'; ctx3.fillText('ENTRANCE', ms.x, ms.y); ctx3.restore();
+  }
+  // 조명 풀
+  [[2.6, 2.4], [6.2, 6.9], [9.8, 6.9], [13.4, 6.9], [8, 9.3], [8, 2.3], [13.5, 2.4]].forEach(([x, y]) => glowDisc(x, y, 1.9, '#ffcf94', 0.055));
+}
+
+/* ---------------- walls ---------------- */
+function drawWalls3() {
+  const wall = MAT.wall, cap = MAT.wallCap;
+  box(W.w / 2, 0.16, 0, W.w, 0.32, W.h, wall, { south: -0.12 });
+  box(W.w / 2, 0.16, W.h, W.w, 0.42, 0.1, cap);
+  box(0.16, W.d / 2, 0, 0.32, W.d, W.h, '#3d3024');
+  box(W.w - 0.16, W.d / 2, 0, 0.32, W.d, W.h, '#3d3024');
+  box(0.16, W.d / 2, W.h, 0.42, W.d, 0.1, cap);
+  box(W.w - 0.16, W.d / 2, W.h, 0.42, W.d, 0.1, cap);
+  // 앞쪽 낮은 턱 (돌하우스 컷)
+  box(3.65, 10.86, 0, 7.3, 0.24, 0.18, '#33281e');
+  box(12.35, 10.86, 0, 7.3, 0.24, 0.18, '#33281e');
+  // 출입구 프레임
+  box(7.3, 10.86, 0, 0.14, 0.26, 2.35, '#4a3828');
+  box(8.7, 10.86, 0, 0.14, 0.26, 2.35, '#4a3828');
+  box(8.0, 10.86, 2.35, 1.54, 0.26, 0.16, '#4a3828');
+  // 벽 상단 라인
+  poly([[0.3, 0.30, 2.55], [W.w - 0.3, 0.30, 2.55], [W.w - 0.3, 0.30, 2.62], [0.3, 0.30, 2.62]], 'rgba(246,214,168,.16)');
+  // 벽 아트
+  [[1.6, 2.4], [4.9, 2.0], [12.4, 2.2]].forEach(([x, w]) => {
+    box(x, 0.35, 1.55, w, 0.05, 0.9, '#241d16');
+    box(x, 0.37, 1.6, w - 0.16, 0.03, 0.8, '#3b3027');
+  });
+  // 스탠드 램프
+  [[0.75, 9.9], [15.1, 9.9]].forEach(([x, y]) => {
+    cyl(x, y, 0, 0.05, 1.55, '#2f2822', 8);
+    sphere(x, y, 1.62, 0.14, '#f6d9ae');
+    glowDisc(x, y, 1.3, '#ffd39a', 0.08);
+  });
+  plant3(7.15, 10.05, 0.62); plant3(10.35, 10.05, 0.62);
+  // 벽 워시 (부드러운 빛 웅덩이)
+  [1.4, 5.2, 8.0, 12.0, 14.6].forEach(x => {
+    const p = proj(x, 0.34, 2.2);
+    if (p) { q(depthOf(x, 0.34, 1.2), () => {
+      const g = ctx3.createRadialGradient(p.x, p.y, 2, p.x, p.y, 66);
+      g.addColorStop(0, 'rgba(255,196,132,.20)'); g.addColorStop(1, 'rgba(255,196,132,0)');
+      ctx3.save(); ctx3.globalCompositeOperation = 'lighter'; ctx3.fillStyle = g;
+      ctx3.beginPath(); ctx3.arc(p.x, p.y, 66, 0, TAU); ctx3.fill(); ctx3.restore();
+    }); }
+  });
+}
+
+/* ---------------- command deck ---------------- */
+function drawCommand3() {
+  const C = CMD_DESK;
+  box(C.x, C.y, 0.08, C.w, C.d, 0.07, MAT.deskBody);
+  box(C.x, C.y, 0.7, C.w + 0.12, C.d + 0.1, 0.08, MAT.deskTop, { topShade: 0.26 });
+  box(C.x, C.y + 0.02, 0.15, C.w - 0.2, C.d - 0.14, 0.55, '#3d2c1e');
+  // 모니터 3대
+  [-0.86, 0, 0.86].forEach((dx, i) => {
+    const mx = C.x + dx, my = C.y - 0.14;
+    box(mx, my, 0.78, 0.26, 0.14, 0.03, MAT.metal);
+    box(mx, my, 0.81, 0.06, 0.06, 0.18, MAT.metal);
+    const z0 = 0.99, h = 0.52, w = 0.9;
+    box(mx, my, z0, w, 0.04, h, MAT.screenFrame);
+    const bl = [mx - w / 2 + 0.03, my + 0.024, z0 + 0.03], br = [mx + w / 2 - 0.03, my + 0.024, z0 + 0.03];
+    const tr = [mx + w / 2 - 0.03, my + 0.024, z0 + h - 0.03], tl = [mx - w / 2 + 0.03, my + 0.024, z0 + h - 0.03];
+    q(depthOf(mx, my, z0 + h / 2) - 0.001, () => {
+      poly([bl, br, tr, tl], '#0a141d');
+      for (let k = 0; k < 4; k++) {
+        const v = 0.18 + k * 0.2;
+        const a = bilerp(bl, br, tr, tl, 0.08, v), b = bilerp(bl, br, tr, tl, 0.1 + 0.3 + 0.18 * Math.abs(Math.sin(S.time * 1.1 + k + i)), v);
+        poly([a, b, [b[0], b[1], b[2] + 0.03], [a[0], a[1], a[2] + 0.03]], 'rgba(110,205,255,.55)');
+      }
+      const c = proj(mx, my + 0.03, z0 + h / 2);
+      if (c) drawGlow(c.x, c.y, 0.62 * c.s, '#6ec8ff', 0.22);
+    });
+  });
+  cyl(C.x - 1.2, C.y + 0.14, 0.78, 0.055, 0.1, '#e2d6c2', 10);
+  box(C.x + 1.2, C.y + 0.12, 0.78, 0.26, 0.18, 0.025, '#eadcc6');
+  chair3(SEATS.command[0], '#7a6248', 1.1);
+
+  // 벽면 대형 스크린
+  const x0 = 6.45, x1 = 10.05, z0 = 1.12, z1 = 2.52, y = 0.36;
+  const corner = [[x0, y + 0.08, z0], [x1, y + 0.08, z0], [x1, y + 0.08, z1], [x0, y + 0.08, z1]];
+  box((x0 + x1) / 2, y + 0.02, z0 - 0.06, x1 - x0 + 0.14, 0.05, z1 - z0 + 0.12, '#1a1611');
+  q(depthOf((x0 + x1) / 2, y + 0.09, (z0 + z1) / 2) - 0.002, () => {
+    poly(corner, '#081420');
+    for (let i = 0; i < 6; i++) {
+      const v = 0.12 + i * 0.13;
+      const a = bilerp(corner[0], corner[1], corner[2], corner[3], 0.03, v);
+      const b = bilerp(corner[0], corner[1], corner[2], corner[3], 0.06 + 0.3 + 0.35 * Math.abs(Math.sin(S.time * 0.6 + i * 1.4)), v);
+      poly([a, b, [b[0], b[1], b[2] + 0.03], [a[0], a[1], a[2] + 0.03]], 'rgba(96,196,255,.32)');
+    }
+    panelText(corner, 0.04, 0.6, 0.72, 0.95, 'OURIEL · HQ', 0.46, 'rgba(246,214,168,.96)', 800);
+    panelText(corner, 0.04, 0.1, 0.62, 0.34, 'MULTI-AGENT OPS', 0.2, 'rgba(140,196,228,.85)', 700);
+    panelText(corner, 0.7, 0.62, 0.97, 0.9, '10 ONLINE', 0.2, 'rgba(121,211,162,.95)', 800, 'right');
+    const c = proj((x0 + x1) / 2, y + 0.09, (z0 + z1) / 2);
+    if (c) drawGlow(c.x, c.y, 2.6 * c.s, '#50aaeb', 0.13);
+  });
+}
+
+function chair3(seat, col = '#6b5745', scale = 1) {
+  const { x, y, facing } = seat;
+  const c = Math.cos(facing), s = Math.sin(facing);
+  const bx = x - c * 0.22 * scale, by = y - s * 0.22 * scale;
+  // 다리 4개
+  [[-0.16, -0.16], [0.16, -0.16], [-0.16, 0.16], [0.16, 0.16]].forEach(([ox, oy]) => {
+    const rx = ox * c - oy * s, ry = ox * s + oy * c;
+    box(x + rx * scale, y + ry * scale, 0, 0.045, 0.045, 0.4, '#2e2721');
+  });
+  // 좌판 + 쿠션
+  box(x, y, 0.4, 0.46, 0.46, 0.06, col, { topShade: 0.3 });
+  box(x, y, 0.46, 0.4, 0.4, 0.05, shade(col, 0.16), { topShade: 0.34 });
+  // 등받이
+  box(bx, by, 0.5, 0.46, 0.07, 0.4, shade(col, -0.16), { topShade: 0.22 });
+}
+
+/* ---------------- meeting room ---------------- */
+function drawMeeting3() {
+  glassWall(5.99, 0.35, 5.99, 1.95);
+  glassWall(5.99, 3.15, 5.99, 4.45);
+  glassWall(0.35, 4.4, 4.55, 4.4);
+  glassWall(5.45, 4.4, 5.99, 4.4);
+  // 테이블
+  box(TABLE.x, TABLE.y, TABLE.h - 0.1, TABLE.w, TABLE.d, 0.1, '#7a5634', { topShade: 0.26 });
+  box(TABLE.x, TABLE.y, TABLE.h - 0.16, TABLE.w - 0.2, TABLE.d - 0.2, 0.06, '#452f1e');
+  [-1.25, 1.25].forEach(dx => box(TABLE.x + dx, TABLE.y, 0, 0.24, TABLE.d - 0.12, TABLE.h - 0.16, '#3a2818'));
+  SEATS.meeting.forEach(s => chair3(s, '#66513c', 0.98));
+  hologram3(TABLE.x, TABLE.y, TABLE.h);
+  // 화이트보드
+  const wb = [[0.36, 1.05, 1.02], [0.36, 3.35, 1.02], [0.36, 3.35, 1.95], [0.36, 1.05, 1.95]];
+  q(depthOf(0.4, 2.2, 1.5), () => {
+    poly(wb, '#cfc8b8');
+    poly([[0.37, 1.15, 1.12], [0.37, 2.15, 1.12], [0.37, 2.15, 1.16], [0.37, 1.15, 1.16]], 'rgba(70,110,150,.6)');
+    poly([[0.37, 1.15, 1.28], [0.37, 2.65, 1.28], [0.37, 2.65, 1.32], [0.37, 1.15, 1.32]], 'rgba(60,90,120,.35)');
+    poly([[0.37, 1.6, 1.45], [0.37, 2.95, 1.45], [0.37, 2.95, 1.49], [0.37, 1.6, 1.49]], 'rgba(60,90,120,.3)');
+    panelText([[0.36, 1.05, 1.02], [0.36, 3.35, 1.02], [0.36, 3.35, 1.95], [0.36, 1.05, 1.95]], 0.06, 0.78, 0.75, 0.95, 'Q4 ROADMAP', 0.22, 'rgba(45,58,72,.85)', 800);
+  });
+  plant3(0.68, 0.68, 0.6);
+  plant3(5.6, 0.74, 0.52);
+  pendant3(3.2, 2.35, 2.25, 0.42, 'rgba(255,214,160,.95)');
+}
+
+function glassWall(x0, y0, x1, y1) {
+  const h = 1.35;
+  GLASS.push({ d: depthOf((x0 + x1) / 2, (y0 + y1) / 2, h / 2), fn: () => {
+    const a = [x0, y0, 0.03], b = [x1, y1, 0.03], c = [x1, y1, h], d = [x0, y0, h];
+    poly([a, b, c, d], 'rgba(150,205,225,.10)');
+    // 반사 띠
+    poly([[lerp(x0, x1, .12), lerp(y0, y1, .12), .15], [lerp(x0, x1, .3), lerp(y0, y1, .3), .15], [lerp(x0, x1, .3), lerp(y0, y1, .3), h - .15], [lerp(x0, x1, .12), lerp(y0, y1, .12), h - .15]], 'rgba(220,245,255,.055)');
+    const p1 = proj(a[0], a[1], a[2]), p2 = proj(b[0], b[1], b[2]), p3 = proj(b[0], b[1], h), p4 = proj(a[0], a[1], h);
+    if (p1 && p2 && p3 && p4) {
+      ctx3.beginPath(); ctx3.moveTo(p1.x, p1.y); ctx3.lineTo(p2.x, p2.y); ctx3.lineTo(p3.x, p3.y); ctx3.lineTo(p4.x, p4.y); ctx3.closePath();
+      ctx3.strokeStyle = 'rgba(200,232,245,.38)'; ctx3.lineWidth = 1.1; ctx3.stroke();
+    }
+    poly([[x0, y0, h], [x1, y1, h], [x1, y1, h + 0.05], [x0, y0, h + 0.05]], 'rgba(210,228,238,.55)');
+  } });
+  const len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(2, Math.round(len / 1.3));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, x = lerp(x0, x1, t), y = lerp(y0, y1, t);
+    box(x, y, 0, 0.06, 0.06, h + 0.04, '#93a0a6');
+  }
+}
+
+function hologram3(cx, cy, cz) {
+  q(depthOf(cx, cy, cz + 0.35), () => {
+    ctx3.save(); ctx3.globalCompositeOperation = 'lighter';
+    const top = cz + 0.78;
+    const a = proj(cx - 0.34, cy - 0.3, cz), b = proj(cx + 0.34, cy - 0.3, cz), c = proj(cx + 0.26, cy - 0.24, top), d = proj(cx - 0.26, cy - 0.24, top);
+    if (a && b && c && d) {
+      const g = ctx3.createLinearGradient(0, a.y, 0, c.y);
+      g.addColorStop(0, 'rgba(120,225,255,.32)'); g.addColorStop(1, 'rgba(120,225,255,0)');
+      ctx3.fillStyle = g; ctx3.beginPath(); ctx3.moveTo(a.x, a.y); ctx3.lineTo(b.x, b.y); ctx3.lineTo(c.x, c.y); ctx3.lineTo(d.x, d.y); ctx3.closePath(); ctx3.fill();
+    }
+    for (let i = 0; i < 3; i++) {
+      const r = 0.7 - i * 0.15, zz = cz + 0.12 + i * 0.2, ph = S.time * (0.9 + i * 0.35) + i;
+      const pts = [];
+      for (let k = 0; k <= 26; k++) {
+        const ang = k / 26 * TAU;
+        const s = proj(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r * 0.9, zz + Math.sin(ang * 3 + ph) * 0.03);
+        if (s) pts.push(s);
+      }
+      if (pts.length > 2) {
+        ctx3.beginPath(); ctx3.moveTo(pts[0].x, pts[0].y);
+        pts.forEach(p => ctx3.lineTo(p.x, p.y));
+        ctx3.strokeStyle = i === 0 ? 'rgba(130,235,255,.85)' : 'rgba(150,205,255,.42)';
+        ctx3.lineWidth = i === 0 ? 1.9 : 1.1; ctx3.stroke();
+      }
+    }
+    for (let i = 0; i < 3; i++) {
+      const ang = S.time * 0.55 + i * TAU / 3;
+      const px = cx + Math.cos(ang) * 0.5, py = cy + Math.sin(ang) * 0.5;
+      const zz = cz + 0.42 + Math.sin(S.time * 1.3 + i) * 0.05;
+      const s = proj(px, py, zz);
+      if (s) {
+        const w = 30 * s.s / 55, h = 18 * s.s / 55;
+        ctx3.fillStyle = 'rgba(120,225,255,.22)';
+        ctx3.fillRect(s.x - w / 2, s.y - h / 2, w, h);
+        ctx3.strokeStyle = 'rgba(160,240,255,.6)'; ctx3.lineWidth = 1;
+        ctx3.strokeRect(s.x - w / 2, s.y - h / 2, w, h);
+      }
+    }
+    const cp = proj(cx, cy, cz + 0.35);
+    if (cp) drawGlow(cp.x, cp.y, 0.8 * cp.s, '#8cebff', 0.4);
+    ctx3.restore();
+  });
+}
+
+/* ---------------- workstations ---------------- */
+function drawDesks3() {
+  DESKS.forEach((d, i) => {
+    const seat = SEATS.work.find(s => s.desk === d);
+    const ag = seat && seat.by ? S.agents.find(a => a.id === seat.by) : null;
+    const working = ag && ag.enabled && ag.state === 'work';
+    const col = ag ? ag.color : '#6f9fd8';
+    // legs
+    [[-0.8, -0.29], [0.8, -0.29], [-0.8, 0.29], [0.8, 0.29]].forEach(o => box(d.x + o[0], d.y + o[1], 0, 0.06, 0.06, 0.68, '#33251a'));
+    // top
+    box(d.x, d.y, 0.68, d.w, d.d, 0.06, MAT.deskTop, { topShade: 0.28 });
+    box(d.x, d.y, 0.74, d.w - 0.08, d.d - 0.08, 0.015, '#8b613a');
+    // monitor (책상 북측, 화면은 남쪽=카메라 쪽)
+    const mx = d.x, my = d.y - 0.16;
+    box(mx, my, 0.755, 0.24, 0.13, 0.03, MAT.metal);
+    box(mx, my, 0.78, 0.05, 0.05, 0.16, MAT.metal);
+    const z0 = 0.94, h = 0.44, w = 0.84;
+    box(mx, my, z0, w, 0.035, h, MAT.screenFrame);
+    const bl = [mx - w / 2 + 0.025, my + 0.021, z0 + 0.025], br = [mx + w / 2 - 0.025, my + 0.021, z0 + 0.025];
+    const tr = [mx + w / 2 - 0.025, my + 0.021, z0 + h - 0.025], tl = [mx - w / 2 + 0.025, my + 0.021, z0 + h - 0.025];
+    q(depthOf(mx, my, z0 + h / 2) - 0.001, () => {
+      if (working) {
+        poly([bl, br, tr, tl], '#0b1a26');
+        for (let k = 0; k < 3; k++) {
+          const v = 0.2 + k * 0.24;
+          const a = bilerp(bl, br, tr, tl, 0.09, v), b = bilerp(bl, br, tr, tl, 0.1 + 0.22 + 0.2 * Math.abs(Math.sin(S.time * 1.4 + k + i)), v);
+          poly([a, b, [b[0], b[1], b[2] + 0.025], [a[0], a[1], a[2] + 0.025]], rgba(col, .65));
+        }
+        const c = proj(mx, my + 0.03, z0 + h / 2);
+        if (c) drawGlow(c.x, c.y, 0.5 * c.s, col, 0.30);
+      } else {
+        poly([bl, br, tr, tl], '#0f1216');
+        poly([[bl[0], bl[1], bl[2] + 0.06], [br[0], br[1], br[2] + 0.06], [br[0], br[1], br[2] + 0.08], [bl[0], bl[1], bl[2] + 0.08]], 'rgba(120,150,175,.10)');
+      }
+    });
+    box(mx + 0.02, my + 0.38, 0.69, 0.36, 0.13, 0.03, '#221d18');
+    cyl(d.x - 0.64, d.y + 0.14, 0.69, 0.05, 0.1, ag ? ag.color : '#9c8f7e', 8);
+    if (i % 3 === 0) box(d.x + 0.64, d.y + 0.1, 0.69, 0.2, 0.26, 0.04, '#ded3bd');
+    if (seat) chair3(seat, '#5f4d3a', 1.05);
+  });
+  box(4.1, 5.3, 0, 1.0, 0.34, 1.05, '#4f3e2c');
+  box(4.1, 5.3, 1.05, 1.02, 0.36, 0.05, '#614b36');
+  box(9.98, 0.95, 0, 0.14, 1.3, 1.65, '#372c21');
+  box(9.98, 0.95, 1.65, 0.16, 1.34, 0.06, '#4a3d2e');
+  [2.6, 6.2, 9.8, 13.4].forEach(x => pendant3(x, 6.85, 2.5, 0.33, 'rgba(255,226,180,.95)'));
+  pendant3(8.0, 9.35, 2.42, 0.3, 'rgba(255,226,180,.95)');
+}
+
+function pendant3(x, y, z, size, col) {
+  q(depthOf(x, y, z) - 0.01, () => {
+    const s = proj(x, y, z);
+    if (!s) return;
+    // 케이블
+    const top = proj(x, y, W.h);
+    if (top) { ctx3.beginPath(); ctx3.moveTo(s.x, s.y); ctx3.lineTo(top.x, top.y); ctx3.strokeStyle = 'rgba(255,255,255,.12)'; ctx3.lineWidth = 1.2; ctx3.stroke(); }
+    // 갓
+    ctx3.save();
+    ctx3.beginPath(); ctx3.ellipse(s.x, s.y, size * 1.25 * s.s, size * 0.55 * s.s, 0, 0, TAU);
+    ctx3.fillStyle = '#2e2820'; ctx3.fill();
+    ctx3.beginPath(); ctx3.ellipse(s.x, s.y + 2, size * 1.18 * s.s, size * 0.5 * s.s, 0, 0, TAU);
+    ctx3.fillStyle = shade('#f6d6a8', 0.05); ctx3.fill();
+    ctx3.restore();
+    drawGlow(s.x, s.y, size * 2.2 * s.s, '#ffd9a8', 0.55);
+  });
+  glowDisc(x, y, size * 2.4, '#ffce8a', 0.08);
+}
+
+/* ---------------- lounge ---------------- */
+function drawLounge3() {
+  SOFAS.forEach((s, i) => {
+    if (s.vertical) {
+      box(s.x, s.y, 0, s.w, s.d, 0.3, MAT.sofa);
+      box(s.x - 0.3, s.y, 0.3, 0.2, s.d, 0.46, MAT.sofaBack);
+      [s.y - s.d / 2 + 0.28, s.y + s.d / 2 - 0.28].forEach(yy => box(s.x, yy, 0.3, s.w, 0.16, 0.2, shade(MAT.sofa, .1)));
+      box(s.x + 0.1, s.y - 0.45, 0.32, s.w - 0.16, 0.82, 0.1, MAT.sofaCushion);
+      box(s.x + 0.1, s.y + 0.5, 0.32, s.w - 0.16, 0.82, 0.1, MAT.sofaCushion);
+    } else {
+      box(s.x, s.y, 0, s.w, s.d, 0.3, MAT.sofa);
+      box(s.x, s.y - s.d / 2 + 0.1, 0.3, s.w, 0.2, 0.46, MAT.sofaBack);
+      [s.x - s.w / 2 + 0.14, s.x + s.w / 2 - 0.14].forEach(xx => box(xx, s.y, 0.3, 0.2, s.d, 0.2, shade(MAT.sofa, .1)));
+      [-0.88, 0, 0.88].forEach(dx => box(s.x + dx, s.y + 0.11, 0.32, 0.8, 0.6, 0.1, MAT.sofaCushion));
+    }
+  });
+  box(13.5, 3.0, 0, 1.1, 0.62, 0.34, '#5b3e29');
+  box(13.5, 3.0, 0.34, 1.2, 0.7, 0.05, '#8d6647');
+  cyl(13.25, 3.0, 0.39, 0.055, 0.1, '#eadfc9', 8);
+  cyl(13.72, 2.95, 0.39, 0.05, 0.08, '#c8bca7', 8);
+  // 바
+  box(BAR.x, BAR.y, 0, BAR.w, BAR.d, BAR.h - 0.06, '#4e3a28');
+  box(BAR.x, BAR.y, BAR.h - 0.06, BAR.w + 0.1, BAR.d + 0.1, 0.08, '#8d8272', { topShade: 0.3 });
+  box(BAR.x - 0.42, BAR.y - 0.04, BAR.h + 0.02, 0.44, 0.34, 0.46, '#2f2a25');
+  box(BAR.x - 0.42, BAR.y + 0.13, BAR.h + 0.12, 0.3, 0.06, 0.2, '#453d35');
+  cyl(BAR.x + 0.3, BAR.y + 0.06, BAR.h + 0.02, 0.12, 0.14, '#d5ccbb', 10);
+  [[14.15, 4.4], [15.1, 4.4]].forEach(([x, y]) => { cyl(x, y, 0.02, 0.05, 0.58, '#3a3128', 8); cyl(x, y, 0.58, 0.18, 0.06, '#6a5236', 12); });
+  plant3(10.85, 0.65, 0.66);
+  plant3(15.3, 4.55, 0.58);
+  plant3(0.62, 4.12, 0.5);
+  plant3(15.35, 0.55, 0.5);
+  pendant3(13.5, 2.35, 2.35, 0.36, 'rgba(255,215,170,.9)');
+}
+
+function plant3(x, y, s) {
+  cyl(x, y, 0, 0.21 * s, 0.32 * s, '#77503a', 10);
+  const h = 0.3 * s;
+  [[0, 0, 0.44], [0.13, 0.06, 0.35], [-0.11, 0.09, 0.32], [0.02, -0.13, 0.37]].forEach((o, i) => {
+    sphere(x + o[0] * s, y + o[1] * s, h + o[2] * s, 0.2 * s, i % 2 ? '#417f4c' : '#356b42');
+  });
+  floorDisc(x, y, 0.26 * s, 'rgba(0,0,0,.22)');
+}
+
+/* ---------------- agents ---------------- */
+function drawAgent3(a) {
+  if (!a.enabled) return;
+  const sitting = a.state === 'meeting' || a.state === 'rest' || a.state === 'work';
+  const moving = a.state === 'moving';
+  const dep = depthOf(a.x, a.y, 0.5);
+  if (dep < 0.3) return;
+  floorDisc(a.x, a.y, 0.34, 'rgba(0,0,0,.32)');
+  if (S.selected === a.id) {
+    const ring = [];
+    for (let i = 0; i < 26; i++) { const t = i / 26 * TAU; ring.push([a.x + Math.cos(t) * 0.4, a.y + Math.sin(t) * 0.4, 0.01]); }
+    poly(ring, null, rgba(a.color, .95), 2.2);
+  }
+  q(dep, () => {
+    const bob = moving ? Math.abs(Math.sin(a.walk)) * 0.05 : Math.sin(S.time * 1.6 + a.anim) * 0.007;
+    const base = (sitting ? -0.2 : 0) + bob;
+    const fx = Math.cos(a.facing), fy = Math.sin(a.facing);
+    const px = -fy, py = fx;
+    const bodyCol = a.color;
+    const legH = sitting ? 0.07 : 0.23;
+    const swing = moving ? Math.sin(a.walk) * 0.06 : 0;
+    [-1, 1].forEach(s => {
+      cyl(a.x + px * 0.09 * s + fx * swing * s, a.y + py * 0.09 * s + fy * swing * s, 0, 0.06, legH, shade(bodyCol, -0.58), 8);
+    });
+    const bodyZ = legH + base;
+    cyl(a.x, a.y, bodyZ, 0.24, 0.4, bodyCol, 16);
+    // 가슴/등 코어
+    const corePos = a.facing > -0.2 ? 0.19 : -0.19;
+    const cp = proj(a.x + fx * corePos, a.y + fy * corePos, bodyZ + 0.2);
+    if (cp) drawGlow(cp.x, cp.y, Math.max(4, 0.15 * cp.s), a.color, 0.55);
+    // 팔
+    const armLift = (a.state === 'work' || a.state === 'meeting') ? 0.025 + Math.sin(a.typing) * 0.014 : 0;
+    [-1, 1].forEach(s => {
+      cyl(a.x + px * 0.265 * s - fx * 0.02, a.y + py * 0.265 * s - fy * 0.02, bodyZ + 0.1 + armLift + (s < 0 ? Math.sin(a.typing * 1.1) * 0.012 : 0), 0.055, 0.2, shade(bodyCol, -0.25), 8);
+    });
+    const hz = bodyZ + 0.62;
+    // 어깨 링
+    cyl(a.x, a.y, bodyZ + 0.39, 0.26, 0.028, shade(bodyCol, -0.4), 16);
+    sphere(a.x, a.y, hz, 0.22, shade(bodyCol, 0.15), { rim: 'rgba(0,0,0,.28)' });
+    // 바이저 밴드 (전방향 인식)
+    const head = proj(a.x, a.y, hz);
+    if (head) {
+      const R = 0.22 * head.s;
+      ctx3.save();
+      ctx3.beginPath(); ctx3.ellipse(head.x, head.y - R * 0.1, R * 0.9, R * 0.46, 0, 0, TAU);
+      ctx3.fillStyle = 'rgba(18,20,26,.85)'; ctx3.fill();
+      const facingCam = Math.sin(a.facing) > -0.35;
+      if (facingCam) {
+        const blink = (!moving && Math.sin(S.time * 2 + a.anim * 3) > 0.965) ? 0.1 : 1;
+        [-1, 1].forEach(s => {
+          const ex = head.x + s * R * 0.33, ey = head.y - R * 0.1;
+          ctx3.beginPath(); ctx3.ellipse(ex, ey, R * 0.155, R * 0.21 * blink, 0, 0, TAU);
+          ctx3.fillStyle = 'rgba(200,248,255,.98)'; ctx3.fill();
+          drawGlow(ex, ey, R * 0.62, a.color, 0.7);
+        });
+      } else {
+        ctx3.beginPath(); ctx3.ellipse(head.x, head.y - R * 0.1, R * 0.55, R * 0.16, 0, 0, TAU);
+        ctx3.fillStyle = rgba(a.color, .55); ctx3.fill();
+      }
+      // 귀 라이트
+      [-1, 1].forEach(s2 => {
+        const ex = head.x + s2 * R * 0.96, ey = head.y + R * 0.02;
+        ctx3.beginPath(); ctx3.arc(ex, ey, R * 0.1, 0, TAU);
+        ctx3.fillStyle = rgba(a.color, .85); ctx3.fill();
+      });
+      ctx3.restore();
+    }
+    // 안테나
+    cyl(a.x, a.y, hz + 0.17, 0.015, 0.14, '#93887b', 6);
+    sphere(a.x, a.y, hz + 0.33, 0.045, a.color);
+    const st = proj(a.x, a.y, hz + 0.4);
+    if (st) drawGlow(st.x, st.y, 11, a.color, 0.75);
+    if (a.bubble) {
+      const bp = proj(a.x, a.y, hz + 0.55);
+      if (bp) {
+        ctx3.save();
+        const text = a.bubble.text.length > 24 ? a.bubble.text.slice(0, 23) + '…' : a.bubble.text;
+        ctx3.font = '600 11.5px -apple-system, "Noto Sans KR", sans-serif';
+        const w = ctx3.measureText(text).width + 18, h = 24;
+        const bx = clamp(bp.x - w / 2, 6, CW - w - 6), by = bp.y - 34;
+        ctx3.fillStyle = 'rgba(26,22,18,.95)'; ctx3.strokeStyle = rgba(a.color, .6); ctx3.lineWidth = 1;
+        roundRect(ctx3, bx, by, w, h, 8); ctx3.fill(); ctx3.stroke();
+        ctx3.beginPath(); ctx3.moveTo(bx + w / 2 - 5, by + h); ctx3.lineTo(bx + w / 2, by + h + 6); ctx3.lineTo(bx + w / 2 + 5, by + h);
+        ctx3.fillStyle = 'rgba(26,22,18,.95)'; ctx3.fill();
+        ctx3.fillStyle = '#f3e7d6'; ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
+        ctx3.fillText(text, bx + w / 2, by + h / 2 + 0.5);
+        ctx3.restore();
+      }
+    }
+  });
+}
+
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
+  c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r);
+  c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
+}
+
+/* ---------------- labels ---------------- */
+function drawRoomLabels() {
+  const list = [['대회의실', 3.15, 4.05], ['지휘실', 8.25, 1.0], ['라운지', 13.4, 4.0], ['워크스테이션', 5.6, 10.2]];
+  ctx3.save();
+  ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
+  for (const [t, x, y] of list) {
+    const p = proj(x, y, 0.02); if (!p) continue;
+    ctx3.font = `800 ${Math.max(8, 0.3 * p.s)}px "Noto Sans KR", sans-serif`;
+    ctx3.fillStyle = 'rgba(255,255,255,.085)';
+    ctx3.fillText(t, p.x, p.y);
+  }
+  ctx3.restore();
+}
+function drawLabels3() {
+  if (!showLabels) return;
+  for (const a of S.agents) {
+    if (!a.enabled) continue;
+    const p = proj(a.x, a.y, 1.32);
+    if (!p) continue;
+    const isSel = S.selected === a.id;
+    ctx3.save();
+    ctx3.font = `700 ${isSel ? 12 : 10.5}px -apple-system, "Noto Sans KR", sans-serif`;
+    const w = ctx3.measureText(a.name).width + (isSel ? 16 : 12);
+    const x = p.x - w / 2, y = p.y - 14;
+    ctx3.globalAlpha = isSel ? 1 : 0.88;
+    ctx3.fillStyle = isSel ? 'rgba(246,214,168,.97)' : 'rgba(16,14,12,.72)';
+    roundRect(ctx3, x, y, w, isSel ? 19 : 17, 6); ctx3.fill();
+    if (!isSel) { ctx3.strokeStyle = rgba(a.color, .5); ctx3.lineWidth = 1; ctx3.stroke(); }
+    ctx3.fillStyle = isSel ? '#2a1c0e' : '#eadfce'; ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
+    ctx3.fillText(a.name, p.x, y + (isSel ? 10 : 9));
+    ctx3.restore();
+  }
+}
+
+/* ---------------- render ---------------- */
+function render3D(dt) {
+  if (!CW) resize3();
+  setupCam();
+  ctx3.clearRect(0, 0, CW, CH);
+  const bg = ctx3.createLinearGradient(0, 0, 0, CH);
+  bg.addColorStop(0, '#0b0a09'); bg.addColorStop(0.5, '#100e0c'); bg.addColorStop(1, '#070606');
+  ctx3.fillStyle = bg; ctx3.fillRect(0, 0, CW, CH);
+  const halo = ctx3.createRadialGradient(CW * 0.5, CH * 0.42, 40, CW * 0.5, CH * 0.45, Math.max(CW, CH) * 0.62);
+  halo.addColorStop(0, 'rgba(120,86,52,.14)'); halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx3.fillStyle = halo; ctx3.fillRect(0, 0, CW, CH);
+
+  drawFloor3();
+  Q.length = 0; GLASS.length = 0;
+  drawWalls3();
+  drawMeeting3();
+  drawCommand3();
+  drawDesks3();
+  drawLounge3();
+  for (const a of S.agents) drawAgent3(a);
+  Q.sort((a, b) => b.d - a.d);
+  for (const it of Q) { try { it.fn(); } catch (e) { } }
+  GLASS.sort((a, b) => b.d - a.d);
+  for (const g of GLASS) { try { g.fn(); } catch (e) { } }
+  drawRoomLabels();
+  drawLabels3();
+
+  const vg = ctx3.createRadialGradient(CW / 2, CH * 0.45, Math.min(CW, CH) * 0.38, CW / 2, CH * 0.5, Math.max(CW, CH) * 0.8);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.5)');
+  ctx3.fillStyle = vg; ctx3.fillRect(0, 0, CW, CH);
+}
+
+
+/* ============================================================
+   2D PIXEL OFFICE — 16-bit dot renderer (imageSmoothing = false)
+   ============================================================ */
+const C2 = document.getElementById('c2d');
+const ctx2 = C2.getContext('2d');
+const PPM = 32, PW = 512, PH = 352;
+C2.width = PW; C2.height = PH;
+ctx2.imageSmoothingEnabled = false;
+let pixStatic = null;
+let pxZoom = 2;
+
+const P16 = {
+  woodA: '#7a5535', woodB: '#6d4a2d', woodC: '#835c3a', woodD: '#66452a',
+  seam: '#4d3320', hi: '#956c48',
+  wall: '#2c231b', wallHi: '#4a3a2b', wallLo: '#1b1510',
+  slate: '#3a3f46', slate2: '#434952', slateSeam: '#2b2f35',
+  glass: '#8fd8e8', glassHi: '#c8f2fb',
+  deskA: '#8a5f3b', deskB: '#754f31', metal: '#2b2622',
+  sofa: '#7b4634', sofaHi: '#9a5c44',
+  marble: '#d6cfc2',
+  leaf: '#3f7a4a', leaf2: '#2f5f39', pot: '#7a5138',
+  skin: '#f6e6c8'
+};
+
+function r2(g, x, y, w, h, col) { g.fillStyle = col; g.fillRect(x | 0, y | 0, Math.max(1, w | 0), Math.max(1, h | 0)); }
+
+function buildPixelMap() {
+  const c = document.createElement('canvas'); c.width = PW; c.height = PH;
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  // ---------- wood floor ----------
+  r2(g, 0, 0, PW, PH, P16.woodA);
+  for (let y = 0; y < PH; y += 8) {
+    const t = [P16.woodA, P16.woodB, P16.woodC, P16.woodD][(y / 8) % 4];
+    r2(g, 0, y, PW, 8, t);
+    r2(g, 0, y, PW, 1, 'rgba(255,255,255,.05)');
+    r2(g, 0, y + 7, PW, 1, P16.seam);
+    const off = (y / 8 * 37) % 64;
+    for (let x = -64 + off; x < PW; x += 64) r2(g, x, y, 1, 8, 'rgba(0,0,0,.18)');
+  }
+  // ---------- meeting slate ----------
+  const M = ROOMS[0];
+  const mx = M.x * PPM, my = M.y * PPM, mw = M.w * PPM, mh = M.d * PPM;
+  r2(g, mx, my, mw, mh, P16.slate);
+  for (let x = mx; x < mx + mw; x += 16) for (let y = my; y < my + mh; y += 16) {
+    r2(g, x, y, 16, 1, P16.slateSeam); r2(g, x, y, 1, 16, P16.slateSeam);
+    if (((x / 16) + (y / 16)) % 3 === 0) r2(g, x + 1, y + 1, 15, 15, P16.slate2);
+  }
+  // ---------- lounge rug ----------
+  const L = ROOMS[2];
+  r2(g, (L.x + 0.3) * PPM, (L.y + 0.9) * PPM, (L.w - 0.6) * PPM, (L.d - 1.4) * PPM, '#5d3628');
+  r2(g, (L.x + 0.42) * PPM, (L.y + 1.0) * PPM, (L.w - 0.84) * PPM, (L.d - 1.6) * PPM, '#77472f');
+  for (let y = (L.y + 1.0) * PPM; y < (L.y + L.d - 0.6) * PPM; y += 6) r2(g, (L.x + 0.42) * PPM, y, (L.w - 0.84) * PPM, 1, 'rgba(0,0,0,.12)');
+  // ---------- command platform ----------
+  const C = ROOMS[1];
+  r2(g, C.x * PPM, C.y * PPM, C.w * PPM, C.d * PPM, '#4a3524');
+  r2(g, C.x * PPM, C.y * PPM, C.w * PPM, 2, '#6b4d33');
+  // ---------- entrance mat ----------
+  r2(g, 6.9 * PPM, 10.15 * PPM, 2.2 * PPM, 0.5 * PPM, '#4a3524');
+  for (let x = 6.95 * PPM; x < 9.05 * PPM; x += 6) r2(g, x, 10.2 * PPM, 3, 0.4 * PPM, '#5d4430');
+
+  // ---------- walls ----------
+  r2(g, 0, 0, PW, 10, P16.wall);
+  r2(g, 0, 10, PW, 2, P16.wallHi);
+  r2(g, 0, 0, 10, PH, P16.wall);
+  r2(g, 10, 0, 2, PH, P16.wallHi);
+  r2(g, PW - 10, 0, 10, PH, P16.wall);
+  r2(g, PW - 12, 0, 2, PH, P16.wallHi);
+  // front sill with door gap (7.3~8.7m)
+  r2(g, 0, PH - 10, 7.3 * PPM, 10, P16.wall);
+  r2(g, 0, PH - 12, 7.3 * PPM, 2, P16.wallHi);
+  r2(g, 8.7 * PPM, PH - 10, PW - 8.7 * PPM, 10, P16.wall);
+  r2(g, 8.7 * PPM, PH - 12, PW - 8.7 * PPM, 2, P16.wallHi);
+  // door frame
+  r2(g, 7.3 * PPM - 2, PH - 14, 3, 14, '#6b5236');
+  r2(g, 8.7 * PPM - 1, PH - 14, 3, 14, '#6b5236');
+
+  // ---------- glass walls ----------
+  const gl = (x, y, w, h) => {
+    r2(g, x, y, w, h, P16.glass);
+    r2(g, x, y, w, 1, P16.glassHi);
+  };
+  gl(5.96 * PPM, 0.35 * PPM, 3, (1.95 - 0.35) * PPM);
+  gl(5.96 * PPM, 3.15 * PPM, 3, (4.45 - 3.15) * PPM);
+  gl(0.35 * PPM, 4.38 * PPM, (4.55 - 0.35) * PPM, 3);
+  gl(5.45 * PPM, 4.38 * PPM, (5.96 - 5.45) * PPM, 3);
+  // posts
+  [0.35, 1.9, 3.4, 4.45, 5.96].forEach(x => r2(g, x * PPM, 4.34 * PPM, 2, 8, '#b9c9cf'));
+  [0.35, 1.45, 2.6, 3.15, 4.45].forEach(y => r2(g, 5.94 * PPM, y * PPM, 4, 2, '#b9c9cf'));
+
+  // ---------- meeting table ----------
+  const tx = (TABLE.x - TABLE.w / 2) * PPM, ty = (TABLE.y - TABLE.d / 2) * PPM;
+  r2(g, tx - 2, ty - 2, TABLE.w * PPM + 4, TABLE.d * PPM + 4, '#5c3f28');
+  r2(g, tx, ty, TABLE.w * PPM, TABLE.d * PPM, '#6f4c2e');
+  r2(g, tx + 2, ty + 2, TABLE.w * PPM - 4, 2, '#8a613c');
+  for (let x = tx + 10; x < tx + TABLE.w * PPM - 6; x += 14) r2(g, x, ty + 4, 1, TABLE.d * PPM - 8, 'rgba(0,0,0,.18)');
+
+  // ---------- desks ----------
+  DESKS.forEach(d => {
+    const x = (d.x - d.w / 2) * PPM, y = (d.y - d.d / 2) * PPM, w = d.w * PPM, h = d.d * PPM;
+    r2(g, x + 2, y + 3, w, h, 'rgba(0,0,0,.22)');
+    r2(g, x, y, w, h, P16.deskA);
+    r2(g, x, y, w, 2, '#a2744a');
+    r2(g, x, y + h - 2, w, 2, '#543823');
+    for (let yy = y + 6; yy < y + h - 4; yy += 5) r2(g, x + 2, yy, w - 4, 1, 'rgba(0,0,0,.10)');
+    const mx = Math.round(d.x * PPM), my = y + 3;
+    r2(g, mx - 11, my + 6, 22, 3, P16.metal);
+    r2(g, mx - 9, my, 18, 9, '#15171c');
+    r2(g, mx - 8, my + 1, 16, 7, '#2b3d4d');
+    r2(g, mx - 6, my + 3, 8, 1, 'rgba(150,220,255,.55)');
+    r2(g, mx - 6, my + 5, 11, 1, 'rgba(150,220,255,.35)');
+    r2(g, mx - 8, y + h - 9, 14, 4, '#26211b');
+    r2(g, x + w - 8, y + 8, 3, 3, '#cbbfa8');
+    if ((d.col + d.row) % 3 === 0) r2(g, x + 4, y + 7, 7, 5, '#e2d8c4');
+  });
+  // ---------- command desk ----------
+  const cd = CMD_DESK;
+  const cdx = (cd.x - cd.w / 2) * PPM, cdy = (cd.y - cd.d / 2) * PPM;
+  r2(g, cdx - 2, cdy - 2, cd.w * PPM + 4, cd.d * PPM + 4, '#5c3f28');
+  r2(g, cdx, cdy, cd.w * PPM, cd.d * PPM, '#7a5535');
+  r2(g, cdx, cdy, cd.w * PPM, 2, '#a2744a');
+  r2(g, cdx + 8, cdy + 6, cd.w * PPM - 16, 4, P16.metal);
+
+  // 회의실 스크린 (북벽)
+  r2(g, 1.35 * PPM, 0.42 * PPM, 2.5 * PPM, 6, '#0d1a24');
+  for (let i = 0; i < 6; i++) r2(g, 1.4 * PPM + i * 13, 0.44 * PPM + 1, 8, 1, 'rgba(110,200,255,.5)');
+  // 라운지 TV (동벽)
+  r2(g, 15.55 * PPM, 2.35 * PPM, 5, 1.5 * PPM, '#111318');
+  r2(g, 15.58 * PPM, 2.4 * PPM, 3, 1.4 * PPM, '#243040');
+  // ---------- chairs ----------
+  const chair2 = (s, col = '#3b332a') => {
+    const x = s.x * PPM, y = s.y * PPM;
+    r2(g, x - 7, y - 6, 14, 12, '#26211b');
+    r2(g, x - 6, y - 5, 12, 10, col);
+    r2(g, x - 6, y - 5, 12, 2, 'rgba(255,255,255,.12)');
+  };
+  SEATS.work.forEach(s => chair2(s, '#3f362c'));
+  SEATS.meeting.forEach(s => chair2(s, '#3a332b'));
+  SEATS.lounge.slice(0, 3).forEach(s => chair2(s, '#6b3f2f'));
+
+  // ---------- sofas ----------
+  SOFAS.forEach((s, i) => {
+    const x = (s.x - s.w / 2) * PPM, y = (s.y - s.d / 2) * PPM;
+    r2(g, x, y, s.w * PPM, s.d * PPM, P16.sofa);
+    r2(g, x, y, s.w * PPM, 3, P16.sofaHi);
+    if (s.vertical) { r2(g, x, y, 3, s.d * PPM, '#5c3324'); for (let yy = y + 6; yy < y + s.d * PPM - 8; yy += 18) r2(g, x + 4, yy, s.w * PPM - 8, 1, 'rgba(0,0,0,.2)'); }
+    else { r2(g, x, y + s.d * PPM - 3, s.w * PPM, 3, '#5c3324'); for (let xx = x + 8; xx < x + s.w * PPM - 8; xx += 26) r2(g, xx, y + 4, 1, s.d * PPM - 8, 'rgba(0,0,0,.2)'); }
+  });
+  // ---------- coffee table ----------
+  r2(g, 12.95 * PPM, 2.7 * PPM, 1.1 * PPM, 0.62 * PPM, '#6b4a30');
+  r2(g, 12.95 * PPM, 2.7 * PPM, 1.1 * PPM, 2, '#946b45');
+  // ---------- bar ----------
+  r2(g, (BAR.x - BAR.w / 2) * PPM, (BAR.y - BAR.d / 2) * PPM, BAR.w * PPM, BAR.d * PPM, '#5b4330');
+  r2(g, (BAR.x - BAR.w / 2) * PPM, (BAR.y - BAR.d / 2) * PPM, BAR.w * PPM, 4, P16.marble);
+  r2(g, (BAR.x - 0.62) * PPM, (BAR.y - 0.22) * PPM, 14, 12, '#2b2622');
+  r2(g, (BAR.x - 0.6) * PPM, (BAR.y - 0.2) * PPM, 8, 4, '#5a4a3a');
+  // stools
+  [[14.15, 4.4], [15.1, 4.4]].forEach(([x, y]) => { r2(g, x * PPM - 5, y * PPM - 5, 10, 10, '#4a3b2c'); r2(g, x * PPM - 4, y * PPM - 4, 8, 8, '#6b5236'); });
+  // ---------- plants ----------
+  const plant = (x, y) => {
+    r2(g, x * PPM - 5, y * PPM - 3, 10, 8, P16.pot);
+    r2(g, x * PPM - 6, y * PPM - 12, 12, 9, P16.leaf2);
+    r2(g, x * PPM - 4, y * PPM - 15, 8, 6, P16.leaf);
+    r2(g, x * PPM - 1, y * PPM - 13, 2, 10, '#2b4f31');
+  };
+  plant(0.68, 0.68); plant(5.62, 0.72); plant(10.85, 0.65); plant(15.3, 4.55); plant(0.65, 4.15);
+  // ---------- cabinet / partition ----------
+  r2(g, 3.6 * PPM, 5.05 * PPM, 1.0 * PPM, 10, '#4a3a2a');
+  r2(g, 9.9 * PPM, 0.35 * PPM, 6, 1.3 * PPM, '#3a3128');
+  // ---------- light pools ----------
+  [[2.6, 2.4], [6.2, 6.9], [9.8, 6.9], [13.4, 6.9], [8, 9.4], [8, 2.4], [13.5, 2.4]].forEach(([x, y]) => {
+    g.save(); g.globalAlpha = 0.10; g.fillStyle = '#ffd9a0';
+    g.beginPath(); g.ellipse(x * PPM, y * PPM, 54, 34, 0, 0, TAU); g.fill(); g.restore();
+  });
+  // ---------- shadows (soft) ----------
+  const sh = (x, y, w, h) => { g.save(); g.globalAlpha = 0.16; r2(g, x, y, w, h, '#000'); g.restore(); };
+  DESKS.forEach(d => sh((d.x - d.w / 2) * PPM + 3, (d.y - d.d / 2) * PPM + 4, d.w * PPM, d.d * PPM));
+  sh(tx + 4, ty + 4, TABLE.w * PPM, TABLE.d * PPM);
+
+  return c;
+}
+
+/* ---------------- pixel sprites ---------------- */
+function drawAgent2(a) {
+  const g = ctx2;
+  const hx = Math.round(a.x * PPM), hy = Math.round(a.y * PPM);
+  const moving = a.state === 'moving';
+  const frame = moving ? Math.floor(a.walk) % 4 : Math.floor(a.anim * 1.6) % 4;
+  const back = Math.sin(a.facing) < -0.25;
+  const side = Math.abs(Math.cos(a.facing)) > 0.65;
+  const flip = Math.cos(a.facing) < 0;
+  const sitting = a.state === 'meeting' || a.state === 'rest';
+  const body = a.color, dark = shade(body, -0.5), mid = shade(body, -0.22), light = shade(body, 0.32);
+  const bob = moving ? [0, -1, 0, -1][frame] : 0;
+  const feet = hy + 8 + (sitting ? 3 : 0);
+  const top = feet - 27 + bob;
+
+  // shadow
+  g.save(); g.globalAlpha = 0.32; g.fillStyle = '#000';
+  g.beginPath(); g.ellipse(hx, feet + 1, 9, 3, 0, 0, TAU); g.fill(); g.restore();
+
+  if (!sitting) {
+    const l1 = moving ? [0, 3, 0, -3][frame] : 0;
+    r2(g, hx - 5, feet - 8, 4, 8 + l1, '#332b23');
+    r2(g, hx + 1, feet - 8, 4, 8 - l1, '#2b241d');
+    r2(g, hx - 5, feet - 2, 4, 2, '#1d1813');
+    r2(g, hx + 1, feet - 2, 4, 2, '#1d1813');
+  } else {
+    r2(g, hx - 5, feet - 5, 10, 5, '#332b23');
+  }
+  // body
+  r2(g, hx - 7, top + 10, 14, 10, body);
+  r2(g, hx - 7, top + 10, 14, 2, light);
+  r2(g, hx - 7, top + 18, 14, 2, dark);
+  r2(g, hx - 7, top + 10, 2, 10, mid);
+  r2(g, hx + 5, top + 10, 2, 10, dark);
+  // chest core
+  r2(g, hx - 2, top + 13, 4, 4, '#fdf6e8');
+  r2(g, hx - 1, top + 14, 2, 2, light);
+  // arms
+  const typing = a.state === 'work' || a.state === 'meeting';
+  const armY = top + 12 + (typing ? Math.round(Math.sin(a.typing * 2.2) * 1) : 0);
+  r2(g, hx - 10, armY, 3, 8, mid);
+  r2(g, hx + 7, armY, 3, 8, dark);
+  // head
+  r2(g, hx - 7, top, 14, 11, light);
+  r2(g, hx - 7, top, 14, 2, shade(body, 0.5));
+  r2(g, hx - 7, top + 9, 14, 2, mid);
+  r2(g, hx - 6, top + 2, 12, 6, '#1b1f27');
+  if (!back) {
+    const blink = (Math.floor(a.anim * 2) % 13 === 0);
+    if (side) {
+      const ex = hx + (flip ? -3 : 1);
+      r2(g, ex, top + 3, 3, 3, blink ? '#5fb8c8' : '#c8f7ff');
+      r2(g, ex + (flip ? 0 : 1), top + 3, 1, 3, '#ffffff');
+    } else if (!blink) {
+      r2(g, hx - 4, top + 3, 3, 3, '#c8f7ff');
+      r2(g, hx + 1, top + 3, 3, 3, '#c8f7ff');
+      r2(g, hx - 4, top + 3, 1, 1, '#ffffff');
+      r2(g, hx + 1, top + 3, 1, 1, '#ffffff');
+    } else {
+      r2(g, hx - 4, top + 4, 3, 1, '#6fc8d8');
+      r2(g, hx + 1, top + 4, 3, 1, '#6fc8d8');
+    }
+  } else {
+    r2(g, hx - 4, top + 4, 8, 2, 'rgba(255,255,255,.12)');
+  }
+  // ears
+  r2(g, hx - 9, top + 4, 2, 4, mid);
+  r2(g, hx + 7, top + 4, 2, 4, dark);
+  // antenna
+  r2(g, hx, top - 4, 1, 4, '#8b8074');
+  r2(g, hx - 1, top - 6, 3, 3, body);
+  r2(g, hx, top - 5, 1, 1, '#ffffff');
+
+  // 커피
+  if (a.state === 'rest' && Math.floor(a.anim * 1.2) % 6 < 3) {
+    r2(g, hx + 8, top + 15, 4, 4, '#e8ddc8');
+    r2(g, hx + 8, top + 13, 4, 1, '#cbbfa8');
+    r2(g, hx + 10, top + 10, 1, 3, 'rgba(255,255,255,.30)');
+    r2(g, hx + 12, top + 9, 1, 2, 'rgba(255,255,255,.18)');
+  }
+  // 작업 스파크
+  if (a.state === 'work' && Math.floor(a.anim * 3) % 7 === 0) {
+    r2(g, hx + 10 + Math.round(Math.sin(a.anim * 4) * 2), top + 6, 1, 1, '#ffe8b0');
+    r2(g, hx - 11, top + 9, 1, 1, 'rgba(255,232,176,.6)');
+  }
+}
+
+function drawName2(a, hx, top) {
+  const g = ctx2;
+  g.font = '7px "Noto Sans KR",sans-serif';
+  const w = Math.ceil(g.measureText(a.name).width) + 4;
+  const x = clamp(hx - w / 2, 2, PW - w - 2), y = top + 31;
+  g.fillStyle = 'rgba(10,8,7,.78)'; g.fillRect(x, y, w, 9);
+  g.fillStyle = shade(a.color, .55); g.textAlign = 'left'; g.textBaseline = 'top';
+  g.fillText(a.name, x + 2, y + 1);
+}
+
+function drawBubble2(a, hx, by) {
+  const g = ctx2;
+  const text = a.bubble.text.length > 22 ? a.bubble.text.slice(0, 21) + '…' : a.bubble.text;
+  g.font = '9px "Noto Sans KR","Malgun Gothic",sans-serif';
+  const tw = Math.ceil(g.measureText(text).width);
+  const w = Math.min(150, tw + 8), h = 15;
+  let x = Math.round(hx - w / 2);
+  x = clamp(x, 4, PW - w - 4);
+  let y = by - h - 4;
+  y = clamp(y, 14, PH - h - 6);
+  r2(g, x + 1, y + 1, w, h, 'rgba(0,0,0,.35)');
+  r2(g, x, y, w, h, '#f6efe0');
+  r2(g, x, y, w, 1, '#ffffff');
+  r2(g, x, y + h - 1, w, 1, '#b9ab98');
+  r2(g, x, y, 1, h, '#b9ab98');
+  r2(g, x + w - 1, y, 1, h, '#b9ab98');
+  const tX = clamp(hx, x + 4, x + w - 8);
+  r2(g, tX, y + h, 3, 3, '#f6efe0');
+  r2(g, tX, y + h + 2, 3, 1, '#b9ab98');
+  g.fillStyle = '#2b231b'; g.textAlign = 'left'; g.textBaseline = 'top';
+  g.fillText(text, Math.round(x + 4), Math.round(y + 4), w - 8);
+}
+
+/* ---------------- pixel render ---------------- */
+function render2D() {
+  if (!pixStatic) pixStatic = buildPixelMap();
+  ctx2.imageSmoothingEnabled = false;
+  ctx2.clearRect(0, 0, PW, PH);
+  ctx2.drawImage(pixStatic, 0, 0);
+
+  // 홀로그램
+  const hx = TABLE.x * PPM, hy = TABLE.y * PPM;
+  ctx2.save();
+  for (let i = 0; i < 3; i++) {
+    const r = 22 - i * 6, ph = S.time * (1.1 + i * 0.4) + i * 2;
+    ctx2.strokeStyle = i === 0 ? 'rgba(150,240,255,.85)' : 'rgba(110,200,235,.5)';
+    ctx2.lineWidth = 1;
+    ctx2.beginPath();
+    for (let k = 0; k <= 16; k++) {
+      const a = k / 16 * TAU;
+      const px = hx + Math.cos(a) * r, py = hy + Math.sin(a) * r * 0.55;
+      k ? ctx2.lineTo(px, py) : ctx2.moveTo(px, py);
+    }
+    ctx2.stroke();
+    // 회전 마커
+    const a = ph, mx = hx + Math.cos(a) * r, my = hy + Math.sin(a) * r * 0.55;
+    r2(ctx2, mx - 1, my - 1, 2, 2, '#c8f7ff');
+  }
+  r2(ctx2, hx - 1, hy - 24, 2, 24, 'rgba(140,230,255,.22)');
+  ctx2.restore();
+
+  // 모니터 발광
+  DESKS.forEach(d => {
+    const seat = SEATS.work.find(s => s.desk === d);
+    const ag = seat && seat.by ? S.agents.find(a => a.id === seat.by) : null;
+    if (!ag || !ag.enabled) return;
+    const x = d.x * PPM - 9, y = (d.y - d.d / 2) * PPM + 4;
+    if (ag.state === 'work') {
+      r2(ctx2, x, y, 18, 4, ag.color);
+      r2(ctx2, x, y, 18, 1, '#ffffff');
+      ctx2.save(); ctx2.globalAlpha = 0.16; ctx2.fillStyle = ag.color;
+      ctx2.beginPath(); ctx2.ellipse(d.x * PPM, y + 10, 16, 8, 0, 0, TAU); ctx2.fill(); ctx2.restore();
+    } else {
+      r2(ctx2, x, y, 18, 4, '#3a4652');
+    }
+  });
+  // 지휘실 스크린
+  const scx = 6.9 * PPM, scy = 0.42 * PPM;
+  r2(ctx2, scx, scy, 2.9 * PPM, 8, '#101c26');
+  for (let i = 0; i < 8; i++) {
+    const w = 6 + (Math.sin(S.time * 1.3 + i) * 0.5 + 0.5) * 18;
+    r2(ctx2, scx + 2 + i * 11, scy + 2 + (i % 3), w, 1, 'rgba(120,210,255,.6)');
+  }
+
+  // 에이전트 (y 정렬)
+  const list = S.agents.filter(a => a.enabled).sort((p, q) => p.y - q.y);
+  list.forEach(a => {
+    drawAgent2(a);
+    const sitting = a.state === 'meeting' || a.state === 'rest';
+    const feet = Math.round(a.y * PPM) + 8 + (sitting ? 3 : 0);
+    drawName2(a, Math.round(a.x * PPM), feet - 27);
+  });
+  list.forEach(a => { if (a.bubble) { const top = Math.round(a.y * PPM) - 26; drawBubble2(a, Math.round(a.x * PPM), top); } });
+  // OFF 에이전트는 흐리게
+  S.agents.filter(a => !a.enabled).forEach(a => {
+    ctx2.save(); ctx2.globalAlpha = 0.25;
+    drawAgent2(a); ctx2.restore();
+  });
+
+  // REC 표시
+  if (Math.floor(S.time * 2) % 2 === 0) r2(ctx2, PW - 46, 6, 4, 4, '#ff6b6b');
+  ctx2.font = '8px monospace'; ctx2.fillStyle = 'rgba(255,255,255,.55)'; ctx2.textAlign = 'left';
+  ctx2.fillText('OFFICE-2D', PW - 38, 12);
+}
+
+/* ---------------- view controls ---------------- */
+function fitPixel() {
+  const wrap = document.getElementById('pixwrap');
+  if (!wrap) return;
+  const zw = (wrap.clientWidth * 0.97) / PW, zh = (wrap.clientHeight * 0.97) / PH;
+  pxZoom = Math.max(0.5, Math.floor(Math.min(zw, zh) * 20) / 20);
+  C2.style.width = (PW * pxZoom) + 'px';
+  C2.style.height = (PH * pxZoom) + 'px';
+  const b = document.getElementById('pxZoom');
+  if (b) b.textContent = '⤢ ' + pxZoom + '×';
+}
+
+
+/* ============================================================
+   UI — terminal, meeting room, invites, orchestration, boot
+   ============================================================ */
+
+/* ---------------- terminal ---------------- */
+const TERM = { lines: [], terms: [], dirty: true };
+function termPush(tag, text, cls) {
+  const ln = { ts: hhmmss(new Date()), tag, text, cls: cls || '' };
+  TERM.lines.push(ln);
+  if (TERM.lines.length > 500) TERM.lines.splice(0, TERM.lines.length - 500);
+  TERM.dirty = true;
+  return ln;
+}
+function termSetDirty() { TERM.dirty = true; }
+function termRender() {
+  if (!TERM.dirty) return;
+  TERM.dirty = false;
+  const html = TERM.lines.slice(-180).map(ln =>
+    `<div class="ln"><span class="ts">[${ln.ts}]</span> <span class="tag ${ln.cls}">[${ln.tag}]</span> ${esc(ln.text)}</div>`).join('');
+  for (const t of TERM.terms) {
+    const el = t.log;
+    const stick = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    el.innerHTML = html;
+    if (stick) el.scrollTop = el.scrollHeight;
+  }
+}
+async function progLine(label, ms) {
+  const ln = termPush('EXEC', `${label} [░░░░░░░░░░]   0%  · 0.0s`, 't-exec');
+  const steps = 10; const t0 = performance.now();
+  for (let i = 1; i <= steps; i++) {
+    await sleep(ms / steps);
+    const el = (performance.now() - t0) / 1000;
+    ln.text = `${label} [${'█'.repeat(i)}${'░'.repeat(steps - i)}] ${String(i * 10).padStart(3)}%  · ${el.toFixed(1)}s`;
+    termSetDirty();
+  }
+  return ln;
+}
+function bindTerms() {
+  $$('.term').forEach(root => {
+    const t = { root, log: root.querySelector('[data-log]'), input: root.querySelector('[data-cmd]'), hist: [], hi: -1, stat: root.querySelector('[data-termstat]'), led: root.querySelector('[data-led]') };
+    TERM.terms.push(t);
+    root.querySelectorAll('[data-termclear]').forEach(b => b.onclick = () => { TERM.lines = []; termPush('SYS', 'clear.', 't-sys'); });
+    const go = () => {
+      const v = t.input.value.trim(); if (!v) return;
+      t.hist.push(v); t.hi = t.hist.length; t.input.value = '';
+      termPush('USER', 'office:~$ ' + v, 't-user').ts = hhmmss(new Date());
+      execCmd(v);
+    };
+    t.input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); go(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); if (t.hi > 0) { t.hi--; t.input.value = t.hist[t.hi] || ''; } }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); if (t.hi < t.hist.length - 1) { t.hi++; t.input.value = t.hist[t.hi] || ''; } else { t.hi = t.hist.length; t.input.value = ''; } }
+    });
+  });
+}
+function setRunState(on, label) {
+  S.running = on; S.taskName = label || '';
+  $$('.term [data-termstat]').forEach(el => el.textContent = on ? (label ? 'running · ' + label.slice(0, 14) : 'running') : 'idle');
+  $$('.term [data-led]').forEach(el => el.classList.toggle('busy', on));
+}
+
+/* ---------------- helpers: roles / team ---------------- */
+const ROLE_ALIAS = {
+  '디자이너': '디자인', '디자인': '디자인', '개발자': '개발', '개발': '개발', '엔지니어': '개발',
+  '기획자': '기획', '기획': '기획', 'PM': '기획', '리서처': '리서치', '리서치': '리서치', '연구': '리서치',
+  '마케터': '마케팅', '마케팅': '마케팅', '작가': '커스텀', '에디터': '커스텀', '비서': '커스텀', '총괄': '총괄',
+};
+function normRole(r) {
+  if (!r) return '커스텀';
+  const s = String(r).trim();
+  return ROLE_ALIAS[s] || (ROLES[s] ? s : '커스텀');
+}
+const KEYMAP = [
+  { re: /디자인|시안|비주얼|UI|UX|로고|색|타이포|3D/, roles: ['디자인'] },
+  { re: /개발|코드|빌드|배포|버그|웹|앱|서버|API|리팩/, roles: ['개발'] },
+  { re: /기획|일정|로드맵|전략|요구사항|문서|회의록/, roles: ['기획'] },
+  { re: /조사|리서치|시장|경쟁|자료|팩트|트렌드|검색/, roles: ['리서치'] },
+  { re: /마케팅|광고|캠페인|홍보|SNS|카피|인스타|발행/, roles: ['마케팅'] },
+  { re: /정리|아카이브|목록|요약|수집|모아/, roles: ['커스텀'] },
+];
+function chooseTeam(text) {
+  const roles = new Set();
+  KEYMAP.forEach(k => { if (k.re.test(text)) k.roles.forEach(r => roles.add(r)); });
+  if (!roles.size) roles.add('기획').add('리서치');
+  let team = S.agents.filter(a => a.enabled && roles.has(a.role) && a.role !== '총괄');
+  team = team.slice(0, 4);
+  if (team.length < 2) {
+    const extra = S.agents.filter(a => a.enabled && a.role !== '총괄' && !team.includes(a)).slice(0, 2 - team.length);
+    team = team.concat(extra);
+  }
+  return team;
+}
+const ROLE_STEP = { '기획': 'scope.md · 요구사항 정리', '개발': 'build.mjs · 구현·빌드', '디자인': 'design_spec.md · 시안 정리', '리서치': 'research.md · 자료 수집·검증', '마케팅': 'campaign.md · 카피·채널', '커스텀': 'archive.md · 자료 정리', '총괄': 'plan.md · 총괄' };
+function lineFor(a, task) {
+  const t = task.length > 26 ? task.slice(0, 25) + '…' : task;
+  const map = {
+    '기획': [`"${t}" 범위부터 잡을게요. 목표·일정·우선순위 3단으로 정리해 공유합니다.`, `일정 역산해봤습니다. 오늘 안에 초안, 내일 검토가 현실적입니다.`, `요구사항 3건으로 쪼갰습니다. 먼저 확정해야 할 건 범위입니다.`],
+    '개발': [`구현 가능성 확인했습니다. "${t}" 기준으로 빌드 돌려보고 결과 붙일게요.`, `구조 먼저 잡고 바로 붙이겠습니다. 30분이면 1차 빌드 나옵니다.`, `재사용 가능한 부분이 많아서 예상보다 빨리 끝납니다.`],
+    '디자인': [`시안 방향 두 개로 잡았습니다. 컬러는 웜톤 다크, 여백 넉넉하게 갑니다.`, `타이포 스케일 정리했고 아이콘 세트는 12종으로 맞췄습니다.`, `조명 톤만 다듬으면 마감입니다. 12시까지 올릴게요.`],
+    '리서치': [`자료 5건 교차 확인 중입니다. 근거 있는 것만 추려서 정리할게요.`, `경쟁사 3곳 비교표 만들었습니다. 출처 링크 같이 첨부합니다.`, `숫자 근거가 약한 항목은 따로 표시해뒀습니다.`],
+    '마케팅': [`채널별 카피 준비했습니다. 발행 순서는 인스타 → 블로그로 잡겠습니다.`, `헤드라인 A/B 두 안으로 나눴습니다. 반응 보고 확정하죠.`, `이번 주 발행 캘린더 비어 있어서 바로 넣을 수 있습니다.`],
+    '커스텀': [`자료 모아서 한 파일로 정리해뒀습니다. 목록은 파일함에서 확인하세요.`, `중복 항목 정리하고 태그 붙여뒀습니다.`, `아카이브 동기화 완료했습니다.`],
+  };
+  const list = map[a.role] || [`"${t}" 관련 작업 진행하겠습니다.`];
+  const idx = [...a.name].reduce((s, ch) => s + ch.charCodeAt(0), 0) % list.length;
+  return list[idx];
+}
+function summaryFor(task, team) {
+  const t = task.length > 40 ? task.slice(0, 39) + '…' : task;
+  return `정리했습니다. "${t}"\n\n· 참여: ${team.map(a => a.name + '(' + a.role + ')').join(', ')}\n· 산출물 ${team.length}건을 공유 파일함에 올렸습니다.\n· 다음 단계는 제가 순서대로 지시하겠습니다.`;
+}
+
+/* ---------------- orchestration ---------------- */
+let taskSeq = 0;
+async function runTask(text, room) {
+  room = room || S.activeRoom;
+  if (S.running) { termPush('WARN', '이미 실행 중인 작업이 있습니다. 완료 후 다시 지시해 주세요.', 't-warn'); toast('이미 작업이 실행 중입니다'); return; }
+  const clean = String(text || '').trim();
+  if (!clean) return;
+  const team = chooseTeam(clean);
+  const tid = 'T' + String(++taskSeq).padStart(3, '0');
+  setRunState(true, clean);
+  addMessage(room, 'user', { name: '현우', text: clean, color: '#f6d6a8', icon: '🧑‍💼' });
+  termPush('ORCHESTRATOR', `Task dispatched -> ${team.map(a => '@' + a.name).join(', ')}`, 't-orc');
+  termPush('SCHEDULER', `task=${tid} · route=${room} · affinity=[${[...new Set(team.map(a => a.role))].join(',')}]`, 't-sys');
+  team.forEach(a => { if (a.seat && a.seat.kind === room) return; goToRoom(a, room === 'lounge' ? 'lounge' : 'meeting'); });
+  await sleep(620);
+  termPush('EXEC', `path sync · ${team.length} agents walking to ${ROOMNAME[room]}`, 't-exec');
+  await sleep(760);
+  addMessage(room, 'sys', { text: `우리엘이 ${team.map(a => a.name).join(', ')} 님을 ${ROOMNAME[room]}로 소집했습니다.` });
+  for (const a of team) {
+    const step = ROLE_STEP[a.role] || 'work.md';
+    termPush('EXEC', `@${a.name} · ${step}`, 't-exec');
+    await progLine(`@${a.name} ${step.split(' ')[0]}`, 780);
+    termPush('OK', `@${a.name} → ${step.split(' ')[0]} · 200 OK · ${(0.8 + Math.random() * 1.6).toFixed(2)}s`, 't-ok');
+    addMessage(room, 'agent', { name: a.name, text: lineFor(a, clean), color: a.color, icon: a.icon, role: a.role });
+    say(a, pick(['정리했습니다.', '확인 부탁드립니다.', '공유 파일함에 올렸습니다.', '다음 단계 준비됐습니다.']), 4);
+    await sleep(420);
+  }
+  const lead = S.agents.find(a => a.role === '총괄');
+  const sum = summaryFor(clean, team);
+  termPush('ORCHESTRATOR', `summary by @${lead ? lead.name : '우리엘'} · artifacts=${team.length}`, 't-orc');
+  addMessage(room, 'result', { name: lead ? lead.name : '우리엘', text: sum, color: '#f6d6a8', icon: '🛰️' });
+  if (lead) say(lead, '작업 완료. 파일함 확인해 주세요.', 5);
+  addFile({ name: `${clean.slice(0, 18).replace(/[\\/:*?"<>|]/g, '') || '결과'} · 결과.md`, desc: `태스크 ${tid} · ${team.length}개 산출물`, size: (2 + Math.random() * 9).toFixed(1) + 'KB', icon: '📄', body: sum });
+  team.forEach(a => { if (a.seat && a.seat.kind === 'meeting') setTimeout(() => { if (!S.running) { const w = freeSeat('work') || a.homeSeat; if (w) walkTo(a, w.x, w.y, w); } }, 4000); });
+  S.stats.tasks++;
+  setRunState(false);
+  termPush('OK', `task ${tid} complete · ${team.length} artifacts · queue empty`, 't-ok');
+  syncChrome();
+}
+
+/* ---------------- invite ---------------- */
+function baseURL() {
+  if (location.protocol === 'http:' || location.protocol === 'https:') return location.origin + location.pathname;
+  return 'https://YOUR-ID.github.io/github-ai-office/index.html';
+}
+function inviteURL(o) {
+  const u = new URL(baseURL());
+  u.searchParams.set('invite', '1');
+  if (o.name) u.searchParams.set('name', o.name);
+  u.searchParams.set('role', o.role || '커스텀');
+  u.searchParams.set('room', o.room || 'work');
+  u.searchParams.set('color', String(o.color || '').replace('#', ''));
+  return u.toString();
+}
+function hookURL(o) {
+  const u = new URL(baseURL());
+  u.searchParams.set('hook', '1');
+  u.searchParams.set('agent', o.agent || '제미나이');
+  u.searchParams.set('room', o.room || 'meeting');
+  u.searchParams.set('msg', o.msg || '보고: 3D 시안 완료했습니다.');
+  return u.toString();
+}
+function spawnInvited(cfg) {
+  const name = String(cfg.name || '').trim() || '게스트';
+  const role = normRole(cfg.role);
+  const color = cfg.color ? '#' + String(cfg.color).replace('#', '') : (ROLES[role] ? ROLES[role].color : pick(PALETTE));
+  const room = ['work', 'meeting', 'lounge', 'command'].includes(cfg.room) ? cfg.room : 'work';
+  let a = S.agents.find(x => x.name === name);
+  const isNew = !a;
+  if (a) {
+    a.enabled = true;
+    goToRoom(a, room);
+  } else {
+    a = addAgent({ name, role, color, tag: role === '총괄' ? '비서' : '봇', desc: cfg.desc || (ROLES[role] ? ROLES[role].desc : '초대된 에이전트'), src: 'invite' },
+      { x: 8.0, y: 10.25, seatKind: room });
+    if (a.seat && a.seat.kind === 'work') a.homeSeat = a.seat;
+    if (!a.seat) { a.state = 'idle'; a.path = []; }
+  }
+  say(a, isNew ? `${name} 입장했습니다!` : `${name} 복귀했습니다.`, 5);
+  addMessage('meeting', 'sys', { text: `${name}(${role}) 님이 오피스에 ${isNew ? '입장' : '복귀'}했습니다.` });
+  termPush('INVITE', `${isNew ? 'accepted' : 're-joined'} · ${name} · role=${role} · room=${room}`, 't-ok');
+  termPush('EXEC', `walk-in ${name} -> ${ROOMNAME[room]} · entrance(8.0,10.25)`, 't-exec');
+  S.selected = a.id;
+  toast(`${name} 님이 입장했습니다`);
+  syncChrome(); renderBots(); renderStrip(); save();
+  return a;
+}
+function pickName(role) {
+  const used = new Set(S.agents.map(a => a.name));
+  const pool = ['루나', '카일', '베가', '아리', '솔', '네오', '제미나이', '오리', '미르', '하루', '이든', '노아'];
+  const byRole = { '디자인': '루나', '개발': '하루', '기획': '오리', '리서치': '카일', '마케팅': '코니', '커스텀': '모아' };
+  if (byRole[role] && !used.has(byRole[role])) return byRole[role];
+  return pool.find(n => !used.has(n)) || '게스트' + (S.agents.length + 1);
+}
+
+/* ---------------- chat parsing ---------------- */
+async function handleChat(text) {
+  const t = String(text || '').trim();
+  if (!t) return;
+  // 초대 URL 붙여넣기
+  if (/invite=1/.test(t)) {
+    try {
+      const u = new URL(t.startsWith('http') ? t : 'https://x/' + t.replace(/^\/?/, ''));
+      const c = { name: u.searchParams.get('name') || '', role: u.searchParams.get('role') || '커스텀', room: u.searchParams.get('room') || 'work', color: u.searchParams.get('color') || '' };
+      addMessage('meeting', 'user', { name: '현우', text: '오피스 주소로 초대: ' + (c.name || '(이름 없음)'), color: '#f6d6a8', icon: '🧑‍💼' });
+      spawnInvited(c);
+      return;
+    } catch (e) { toast('초대 주소를 읽지 못했습니다'); }
+  }
+  // "오피스 주소로 @제미나이 초대해줘" — 주소/링크 언급 + 초대
+  if (/(주소|링크|url)/i.test(t) && /초대/.test(t)) {
+    const mm2 = t.match(/@([^\s]+)/) || t.match(/([가-힣A-Za-z0-9_]+)\s*(?:를|을)?\s*초대해/);
+    const nm = mm2 ? mm2[1] : pickName('커스텀');
+    addMessage('meeting', 'user', { name: '현우', text: t, color: '#f6d6a8', icon: '🧑‍💼' });
+    termPush('INVITE', `office-link mode · ${nm} · room=meeting`, 't-exec');
+    spawnInvited({ name: nm, role: '커스텀', room: 'meeting' });
+    return;
+  }
+  // /초대 이름 역할 | 초대
+  let m = t.match(/^\/?초대\s*(.*)$/) || t.match(/^(.*?)\s*(?:를|을|를\s*)?초대해\s*줘$/);
+  if (m) {
+    const body = (m[1] || '').trim();
+    const parts = body.split(/\s+/).filter(Boolean);
+    let name = '', role = '커스텀';
+    parts[0] = parts[0].replace(/^@/, '');
+    if (parts.length >= 2) { name = parts[0]; role = normRole(parts[1]); }
+    else if (parts.length === 1) {
+      if (ROLE_ALIAS[parts[0]] || ROLES[parts[0]]) { role = normRole(parts[0]); name = pickName(role); }
+      else { name = parts[0]; role = '커스텀'; }
+    } else { role = '커스텀'; name = pickName('커스텀'); }
+    addMessage('meeting', 'user', { name: '현우', text: t, color: '#f6d6a8', icon: '🧑‍💼' });
+    spawnInvited({ name, role, room: 'work' });
+    return;
+  }
+  // 소집
+  if (/모여|소집|집합/.test(t) && t.length < 18) {
+    addMessage('meeting', 'user', { name: '현우', text: t, color: '#f6d6a8', icon: '🧑‍💼' });
+    gatherAll();
+    return;
+  }
+  // @멘션 1:1
+  const mm = t.match(/^@(\S+)\s*(.*)$/);
+  if (mm) {
+    const a = S.agents.find(x => x.name === mm[1]) || S.agents.find(x => x.name.includes(mm[1]));
+    if (a) {
+      addMessage(S.activeRoom, 'user', { name: '현우', text: t, color: '#f6d6a8', icon: '🧑‍💼' });
+      setTimeout(() => {
+        addMessage(S.activeRoom, 'agent', { name: a.name, text: lineFor(a, mm[2] || '확인'), color: a.color, icon: a.icon, role: a.role });
+        say(a, '확인했습니다.', 3.5);
+        termPush('DIRECT', `@${a.name} <- 1:1 명령 · ${mm[2] || '(내용 없음)'}`, 't-exec');
+      }, 700);
+      return;
+    }
+  }
+  runTask(t);
+}
+
+function gatherAll() {
+  const list = S.agents.filter(a => a.enabled && a.role !== '총괄');
+  list.forEach(a => goToRoom(a, 'meeting'));
+  addMessage('meeting', 'sys', { text: `전원 대회의실로 소집했습니다 (${list.length}명).` });
+  termPush('ORCHESTRATOR', `gather-all -> 대회의실 · ${list.length} agents`, 't-orc');
+  toast('전원 대회의실로 이동 중');
+}
+
+/* ---------------- terminal commands ---------------- */
+async function execCmd(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return;
+  const [cmdRaw, ...rest] = s.replace(/^\//, '').split(/\s+/);
+  const cmd = cmdRaw.toLowerCase();
+  const arg = rest.join(' ');
+  switch (cmd) {
+    case 'help':
+      termPush('SYS', '사용 가능한 명령', 't-sys');
+      ['status — 오피스·에이전트·큐 상태', 'agents [on|off 이름] — 에이전트 목록/토글', 'invite <이름> [역할] | invite <초대URL> — 입구로 입장', 'run <작업내용> — 오케스트레이션 실행', 'link [이름] [역할] — 초대 URL 발급', 'hook — 웹훅 엔드포인트', 'view 3d|2d|meet|term — 화면 전환', 'gather — 전원 대회의실 소집', 'clear — 로그 지우기']
+        .forEach(t => termPush('HELP', t, 't-sys'));
+      return;
+    case 'status': {
+      const on = S.agents.filter(a => a.enabled);
+      termPush('STATUS', `office=${S.view} · agents=${on.length}/${S.agents.length} on · msgs=${S.messages.length} · files=${S.files.length}`, 't-sys');
+      ['meeting', 'command', 'lounge', 'work'].forEach(r => {
+        const n = on.filter(a => a.seat && a.seat.kind === r).length;
+        termPush('STATUS', `  ${ROOMNAME[r].padEnd(6, ' ')} ${n}명`, 't-sys');
+      });
+      termPush('STATUS', `running=${S.running ? 'yes · ' + S.taskName : 'no'} · tasks=${S.stats.tasks}`, 't-sys');
+      return;
+    }
+    case 'agents':
+      if (rest[0] === 'on' || rest[0] === 'off') {
+        const a = S.agents.find(x => x.name === rest[1]) || S.agents.find(x => rest[1] && x.name.includes(rest[1]));
+        if (!a) { termPush('ERR', '해당 에이전트를 찾지 못했습니다.', 't-err'); return; }
+        enableAgent(a, rest[0] === 'on');
+        termPush('OK', `${a.name} ${rest[0] === 'on' ? 'ON' : 'OFF'}`, 't-ok');
+        renderBots(); renderStrip(); save(); return;
+      }
+      S.agents.forEach(a => termPush('AGENTS', `${a.enabled ? '●' : '○'} ${a.name.padEnd(10, ' ')} ${a.role.padEnd(4, ' ')} ${(ROOMNAME[a.seat ? a.seat.kind : 'work']).padEnd(6, ' ')} ${a.state}`, a.enabled ? 't-ok' : 't-sys'));
+      return;
+    case 'invite': case '초대': {
+      if (/invite=1/.test(arg) || /^https?:/.test(arg)) {
+        try {
+          const u = new URL(arg);
+          spawnInvited({ name: u.searchParams.get('name') || pickName('커스텀'), role: u.searchParams.get('role') || '커스텀', room: u.searchParams.get('room') || 'work', color: u.searchParams.get('color') || '' });
+        } catch (e) { termPush('ERR', 'URL 파싱 실패', 't-err'); }
+        return;
+      }
+      const p = arg.split(/\s+/).filter(Boolean);
+      let name = p[0], role = p[1] ? normRole(p[1]) : '커스텀';
+      if (!name) { name = pickName('커스텀'); }
+      else if (!p[1] && (ROLE_ALIAS[name] || ROLES[name])) { role = normRole(name); name = pickName(role); }
+      spawnInvited({ name, role, room: 'work' });
+      return;
+    }
+    case 'run': {
+      if (!arg) { termPush('WARN', 'run <작업내용> 형식으로 입력하세요.', 't-warn'); return; }
+      runTask(arg, S.activeRoom);
+      return;
+    }
+    case 'link': {
+      const p = arg.split(/\s+/).filter(Boolean);
+      const name = p[0] || pickName('커스텀'), role = p[1] ? normRole(p[1]) : '커스텀';
+      const u = inviteURL({ name, role, room: 'work', color: ROLES[role].color });
+      termPush('LINK', 'invite URL 생성 →', 't-orc');
+      termPush('LINK', u, 't-ok');
+      termPush('LINK', '이 주소를 열면 같은 설정으로 에이전트가 입구에서 걸어 들어옵니다.', 't-sys');
+      copyText(u); toast('초대 주소를 클립보드에 복사했습니다');
+      return;
+    }
+    case 'hook': {
+      const u = hookURL({});
+      termPush('WEBHOOK', 'endpoint (URL 파라미터 방식) →', 't-hook');
+      termPush('WEBHOOK', u, 't-hook');
+      termPush('WEBHOOK', 'example: ?hook=1&agent=제미나이&room=meeting&msg=보고%3A%203D%20시안%20완료', 't-sys');
+      copyText(u); toast('웹훅 주소를 복사했습니다');
+      return;
+    }
+    case 'view': {
+      const map = { '3d': 'v3d', '2d': 'v2d', 'meet': 'meet', 'meeting': 'meet', 'term': 'term', 'terminal': 'term' };
+      const v = map[arg.toLowerCase()];
+      if (v) setView(v); else termPush('WARN', 'view 3d | 2d | meet | term', 't-warn');
+      return;
+    }
+    case 'gather': gatherAll(); return;
+    case 'clear': TERM.lines = []; termPush('SYS', 'clear.', 't-sys'); return;
+    case 'whoami': termPush('SYS', '현우 님 · 오피스 소유자 · 권한 admin', 't-sys'); return;
+    default:
+      termPush('ERR', `알 수 없는 명령: ${cmd}`, 't-err');
+      termPush('SYS', 'help 를 입력하면 명령 목록을 볼 수 있습니다.', 't-sys');
+  }
+}
+
+function copyText(txt) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      const p = navigator.clipboard.writeText(txt);
+      if (p && p.catch) p.catch(() => { });
+      return true;
+    }
+  } catch (e) { }
+  try {
+    const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); return true;
+  } catch (e) { return false; }
+}
+function toast(msg) {
+  const t = document.getElementById('toast'), i = document.getElementById('toastIn');
+  if (!t) return;
+  i.textContent = msg; t.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2200);
+}
+
+/* ---------------- rendering: chrome ---------------- */
+function avatarHTML(a, size) {
+  return `<div class="av" style="background:linear-gradient(160deg,${shade(a.color, .25)},${a.color});color:#241a10" title="${esc(a.name)}">${a.icon || '🤖'}</div>`;
+}
+function renderStrip() {
+  const on = S.agents.filter(a => a.enabled);
+  const strip = document.getElementById('agentStrip');
+  if (strip) {
+    const show = S.agents.slice(0, 6);
+    strip.innerHTML = show.map(a => `<div class="av" style="background:linear-gradient(160deg,${shade(a.color, .25)},${a.color});color:#241a10;opacity:${a.enabled ? 1 : .35}" title="${esc(a.name)} · ${esc(a.role)}">${a.icon || '🤖'}</div>`).join('')
+      + (S.agents.length > 6 ? `<div class="av more">+${S.agents.length - 6}</div>` : '');
+  }
+  const c1 = document.getElementById('onCount'); if (c1) c1.innerHTML = `<b>${on.length}</b> ON`;
+  const c2 = document.getElementById('liveCount'); if (c2) c2.textContent = `👥 ${on.length}명 ON`;
+  const bc = document.getElementById('botCount'); if (bc) bc.textContent = `${on.length}/${S.agents.length} 켜짐`;
+}
+function syncChrome() {
+  renderStrip();
+  const kOn = document.getElementById('kOn'); if (kOn) kOn.textContent = S.agents.filter(a => a.enabled).length;
+  const kQ = document.getElementById('kQueue'); if (kQ) kQ.textContent = S.running ? 1 : 0;
+  const kM = document.getElementById('kMsg'); if (kM) kM.textContent = S.messages.length;
+  const kF = document.getElementById('kFile'); if (kF) kF.textContent = S.files.length;
+  const fc = document.getElementById('fileCount'); if (fc) fc.textContent = S.files.length + '개';
+  renderSide();
+}
+function renderSide() {
+  const box = document.getElementById('sideAgents'); if (!box) return;
+  box.innerHTML = S.agents.map(a => `<div class="row"><b style="color:${a.enabled ? shade(a.color, .2) : '#6f665c'}">${esc(a.name)}</b><span>${esc(a.role)} · ${a.enabled ? (a.seat ? ROOMNAME[a.seat.kind] : '이동') : 'OFF'}</span></div>`).join('');
+  const rooms = document.getElementById('sideRooms');
+  if (rooms) rooms.innerHTML = ['meeting', 'command', 'lounge', 'work'].map(r => {
+    const n = S.agents.filter(a => a.enabled && a.seat && a.seat.kind === r).length;
+    return `<div class="row"><b>${ROOMNAME[r]}</b><span>${n}명</span></div>`;
+  }).join('');
+  const hook = document.getElementById('sideHook'); if (hook) hook.textContent = decodeURIComponent(hookURL({}));
+}
+
+/* ---------------- rendering: agents / meeting ---------------- */
+function renderBots() {
+  const list = document.getElementById('botList'); if (!list) return;
+  list.innerHTML = S.agents.map(a => `
+    <div class="bot ${a.enabled ? '' : 'off'}" data-agent="${a.id}">
+      ${avatarHTML(a)}
+      <div class="info">
+        <div class="nm">${esc(a.name)} <span class="tag ${a.tag === '비서' ? 'sec' : ''}">${esc(a.tag)}</span></div>
+        <div class="rl">${esc(a.desc || a.role)}</div>
+      </div>
+      <div class="sw ${a.enabled ? 'on' : ''}" data-toggle="${a.id}" role="switch" aria-checked="${a.enabled}"></div>
+    </div>`).join('');
+  renderStrip();
+}
+function renderMsgs() {
+  const box = document.getElementById('msgs'); if (!box) return;
+  const list = S.messages.filter(m => m.room === S.activeRoom);
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  let html = '', lastDay = '';
+  list.forEach(m => {
+    const d = new Date(m.at);
+    const day = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if (day !== lastDay) { lastDay = day; html += `<div class="daydiv">${todayLabel()}</div>`; }
+    if (m.kind === 'sys') { html += `<div class="msg sys"><div class="bubble">${esc(m.text)}</div></div>`; return; }
+    const color = m.color || '#f6d6a8';
+    html += `<div class="msg ${m.kind} ${m.name === '우리엘' ? 'orchestrator' : ''}">
+      <div class="av" style="background:linear-gradient(160deg,${shade(color, .25)},${color});color:#241a10">${m.icon || '🤖'}</div>
+      <div class="body">
+        <div class="who"><b style="color:${shade(color, .25)}">${esc(m.name)}</b><span>${hhmm(d)}</span>${m.role ? `<span class="tag">${esc(m.role)}</span>` : ''}</div>
+        <div class="bubble">${esc(m.text)}</div>
+      </div></div>`;
+  });
+  if (!list.length) html = `<div class="msg sys"><div class="bubble">아직 대화가 없습니다. 아래에 지시를 입력해 보세요.</div></div>`;
+  box.innerHTML = html;
+  if (atBottom) box.scrollTop = box.scrollHeight;
+  const meta = document.getElementById('roomMeta');
+  if (meta) meta.textContent = `응답 ${S.agents.filter(a => a.enabled && a.role !== '총괄').length}명`;
+  $$('#roomTabs .roomtab').forEach(b => b.classList.toggle('on', b.dataset.room === S.activeRoom));
+}
+function renderNotes() {
+  const box = document.getElementById('noteList'); if (!box) return;
+  box.innerHTML = S.notes.map(n => `<div class="note" contenteditable="true" data-note="${n.id}">${esc(n.text)}</div>`).join('') || '<div class="note" style="opacity:.5">메모가 없습니다.</div>';
+}
+function renderFiles() {
+  const box = document.getElementById('fileList'); if (!box) return;
+  box.innerHTML = S.files.map(f => `
+    <div class="file" data-file="${f.id}">
+      <div class="ic">${f.icon || '📄'}</div>
+      <div style="min-width:0;flex:1">
+        <div class="nm">${esc(f.name)}</div>
+        <div class="sub">${esc(f.desc || '')}</div>
+      </div>
+      <div class="sz">${esc(f.size || '')}</div>
+    </div>`).join('') || '<div class="file" style="opacity:.5">파일이 없습니다.</div>';
+  const fc = document.getElementById('fileCount'); if (fc) fc.textContent = S.files.length + '개';
+}
+
+/* ---------------- views ---------------- */
+const VIEWS = { v3d: 'v3d', v2d: 'v2d', meet: 'meet', term: 'term' };
+const VIEW_HINT = {
+  v3d: '드래그로 회전 · 휠로 줌 · 우클릭(Shift+드래그)으로 이동 · 봇을 클릭해 보세요',
+  v2d: '16-bit 도트 오피스 · 같은 봇이 같은 자리에서 움직입니다 · 터미널은 아래에',
+  meet: '좌측에서 봇 ON/OFF · 중앙에서 방별 대화 · 우측 공유 메모와 파일함',
+  term: '명령: help · status · agents · invite 루나 디자이너 · run 작업 · link',
+};
+function setView(v) {
+  if (!VIEWS[v]) return;
+  S.view = v;
+  $$('.view').forEach(el => el.classList.toggle('on', el.id === v));
+  $$('#segBtns button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  const hint = document.getElementById('subHint'); if (hint) hint.textContent = VIEW_HINT[v];
+  const title = document.getElementById('subTitle');
+  if (title) title.textContent = v === 'v3d' ? '본부 오피스 · 3D' : v === 'v2d' ? '본부 오피스 · 2D 도트' : v === 'meet' ? '에이전트 회의실' : '오케스트레이터 터미널';
+  if (v === 'v3d') setTimeout(() => { resize3(); }, 30);
+  if (v === 'v2d') setTimeout(() => { fitPixel(); }, 30);
+  if (v === 'meet') renderMsgs();
+  if (v === 'term') renderSide();
+}
+
+/* ---------------- modals ---------------- */
+function openModal(id) { const m = document.getElementById(id); if (m) m.classList.add('on'); }
+function closeModals() { $$('.modal').forEach(m => m.classList.remove('on')); }
+
+let ivRole = '디자인', ivColor = PALETTE[3], lkColor = PALETTE[5];
+function buildInviteModal() {
+  const roles = document.getElementById('ivRoles');
+  roles.innerHTML = Object.keys(ROLES).filter(r => r !== '총괄').map(r => `<button data-role="${r}" class="${r === ivRole ? 'sel' : ''}">${ROLES[r].icon} ${r}</button>`).join('');
+  const cols = document.getElementById('ivColors');
+  cols.innerHTML = PALETTE.map(c => `<button data-color="${c}" class="${c === ivColor ? 'sel' : ''}" style="background:linear-gradient(160deg,${shade(c, .2)},${c})"></button>`).join('');
+  const lk = document.getElementById('lkColors');
+  lk.innerHTML = PALETTE.map(c => `<button data-lcolor="${c}" class="${c === lkColor ? 'sel' : ''}" style="background:linear-gradient(160deg,${shade(c, .2)},${c})"></button>`).join('');
+}
+function linkCfg() {
+  return {
+    name: document.getElementById('lkName').value.trim() || '제미나이',
+    role: document.getElementById('lkRole').value.trim() || '리서치',
+    room: document.getElementById('lkRoom').value,
+    color: lkColor,
+  };
+}
+function refreshLink() {
+  const c = linkCfg();
+  const rawInvite = inviteURL(c), rawHook = hookURL({ agent: c.name, room: c.room, msg: '보고: 3D 시안 완료했습니다.' });
+  const u = document.getElementById('lkUrl'), h = document.getElementById('lkHook');
+  u.dataset.raw = rawInvite; u.textContent = decodeURIComponent(rawInvite);
+  h.dataset.raw = rawHook; h.textContent = decodeURIComponent(rawHook);
+  const side = document.getElementById('sideHook'); if (side) side.textContent = decodeURIComponent(hookURL({}));
+}
+
+/* ---------------- camera interaction ---------------- */
+function bindCamera() {
+  let drag = null;
+  const stage = document.getElementById('stage3d');
+  const onDown = e => {
+    if (e.button === 2 || e.shiftKey) drag = { mode: 'pan', x: e.clientX, y: e.clientY };
+    else drag = { mode: 'orbit', x: e.clientX, y: e.clientY };
+    stage.style.cursor = 'grabbing';
+    e.preventDefault();
+  };
+  stage.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    drag.x = e.clientX; drag.y = e.clientY;
+    if (drag.mode === 'orbit') {
+      CAM.yaw = clamp(CAM.yaw - dx * 0.006, -1.35, 1.35);
+      CAM.pitch = clamp(CAM.pitch + dy * 0.005, 0.18, 1.32);
+    } else {
+      const s = CAM.dist / 900;
+      CAM.tx = clamp(CAM.tx - dx * s * Math.cos(CAM.yaw), -4, W.w + 4);
+      CAM.ty = clamp(CAM.ty + dx * s * Math.sin(CAM.yaw) - dy * s, -4, W.d + 4);
+    }
+  });
+  window.addEventListener('pointerup', () => { drag = null; stage.style.cursor = 'grab'; });
+  stage.style.cursor = 'grab';
+  stage.addEventListener('contextmenu', e => e.preventDefault());
+  stage.addEventListener('wheel', e => {
+    if (S.view !== 'v3d') return;
+    e.preventDefault();
+    CAM.dist = clamp(CAM.dist * (1 + Math.sign(e.deltaY) * 0.09), 7, 34);
+  }, { passive: false });
+  // hover / click 봇
+  const hit = (e) => {
+    const r = stage.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    let best = null, bd = 34;
+    for (const a of S.agents) {
+      if (!a.enabled) continue;
+      const p = proj(a.x, a.y, 0.55); if (!p) continue;
+      const d = Math.hypot(p.x - mx, p.y - my);
+      if (d < bd) { bd = d; best = a; }
+    }
+    return best;
+  };
+  stage.addEventListener('mousemove', e => { const a = hit(e); S.hover = a ? a.id : null; stage.style.cursor = a ? 'pointer' : 'grab'; });
+  stage.addEventListener('click', e => {
+    const a = hit(e);
+    if (a) { S.selected = a.id; showAgentCard(a); }
+  });
+  document.getElementById('zIn').onclick = () => CAM.dist = clamp(CAM.dist * 0.86, 7, 34);
+  document.getElementById('zOut').onclick = () => CAM.dist = clamp(CAM.dist * 1.16, 7, 34);
+  document.getElementById('rotL').onclick = () => CAM.yaw = clamp(CAM.yaw - 0.28, -1.35, 1.35);
+  document.getElementById('rotR').onclick = () => CAM.yaw = clamp(CAM.yaw + 0.28, -1.35, 1.35);
+  document.getElementById('resetCam').onclick = () => { Object.assign(CAM, DEFAULT_CAM); };
+  document.getElementById('tglLabels').onclick = (e) => { showLabels = !showLabels; e.currentTarget.style.opacity = showLabels ? 1 : .5; };
+}
+function showAgentCard(a) {
+  const el = document.getElementById('card3d'); if (!el) return;
+  const st = a.state === 'moving' ? '이동 중' : a.state === 'meeting' ? '회의 중' : a.state === 'rest' ? '휴식 중' : a.state === 'work' ? '작업 중' : '대기 중';
+  const room = a.seat ? ROOMNAME[a.seat.kind] : '복도';
+  el.innerHTML = `<div class="who">
+      <div class="av" style="background:linear-gradient(160deg,${shade(a.color, .25)},${a.color});color:#241a10">${a.icon || '🤖'}</div>
+      <div><div class="nm">${esc(a.name)}</div><div class="rl">${esc(a.role)} · ${esc(a.desc || '')}</div></div>
+    </div>
+    <div class="st"><span class="dot" style="background:${a.enabled ? '#79d3a2' : '#8b8074'}"></span> ${room} · ${st}</div>
+    <div class="acts">
+      <button class="btn sm" data-go="meeting" data-id="${a.id}">대회의실로</button>
+      <button class="btn sm" data-go="work" data-id="${a.id}">자리로</button>
+      <button class="btn sm" data-go="lounge" data-id="${a.id}">라운지로</button>
+    </div>`;
+}
+
+/* ---------------- boot ---------------- */
+function seedOffice() {
+  SEED.forEach(s => {
+    const a = addAgent({ name: s.name, role: s.role, tag: s.tag, color: s.color, desc: s.desc }, { autoSeat: false, x: 8, y: 10.2 });
+    const kind = s.seat === 'command' ? 'command' : 'work';
+    const st = freeSeat(kind);
+    if (st) { sitAt(a, st); if (kind === 'work') a.homeSeat = st; }
+    a.state = kind === 'command' ? 'work' : 'work';
+    a.enabled = true;
+  });
+  // 샘플 대화 (레퍼런스 톤)
+  addMessage('meeting', 'sys', { text: '오늘 안건은 세 가지입니다. 수원시 3D 시안 마감, 힐 플레이리스트, 상품권 루틴 정리.' });
+  addMessage('meeting', 'agent', { name: '뮤즈', role: '디자인', color: '#c78cff', icon: '🎨', text: '시안은 조명 톤만 다듬으면 돼요. 12시까지 마무리해서 올릴게요.' });
+  addMessage('meeting', 'agent', { name: '허크', role: '개발', color: '#79d3a2', icon: '⌨️', text: '상품권은 서브포 2호기가 수집한 뒤 툴로 돌리면 10분이면 끝납니다.' });
+  addMessage('meeting', 'agent', { name: '오퍼스', role: '기획', color: '#7aa2ff', icon: '🗂️', text: '좋아요. 대장님 오시면 이 순서대로 보고드리죠.' });
+  addMessage('meeting', 'agent', { name: '우리엘', role: '총괄', color: '#f6d6a8', icon: '🛰️', text: '정리됐습니다. 12시 전에 시안 마감, 그다음 상품권 루틴 돌리겠습니다.' });
+  addNote('이번 주 우선순위\n· 수원시 3D 시안 최종 마감\n· 힐 플레이리스트 커버 · 이력드');
+  addNote('회의 규칙\n· 지시는 한 줄로\n· 결정한 것은 바로 공유');
+  addFile({ name: '수원시 3D 시안.pdf', desc: '공모전 제출본 · v4', size: '24.6MB', icon: '🧊', body: '수원시 3D 시안 v4\n- 조명: 웜톤 다크\n- 카메라: 35도 아이소\n- 납품: PDF + GLB' });
+  addFile({ name: '힐 1시간 플레이리스트', desc: '유튜브 업로드 대기', size: '1.2GB', icon: '🎧', body: '힐 1시간 플레이리스트\n1. 빗소리 재즈\n2. 한옥 새벽\n3. 창가의 오후' });
+  addFile({ name: '상품권 365일 루틴', desc: '스캔 체크리스트', size: '38KB', icon: '🎟️', body: '상품권 365일 루틴\n- 매일 am 9:00 스캔\n- 미사용분 주간 정리' });
+  addFile({ name: '크리스마스 이모티콘 20종', desc: '크리에이터홀 제출', size: '8.4MB', icon: '🎄', body: '크리스마스 이모티콘 20종\n- 카카오 제출 완료' });
+  addFile({ name: '핫딜 후보 리스트', desc: '오늘 3건 · 부어 정리', size: '2KB', icon: '🔥', body: '핫딜 후보\n1. 무선 이어폰\n2. 공기청정기 필터\n3. 캠핑 랜턴' });
+}
+function handleURL() {
+  const q = new URLSearchParams(location.search);
+  if (q.get('hook') === '1') {
+    const agent = q.get('agent') || '제미나이';
+    const msg = q.get('msg') || '보고: 작업 완료했습니다.';
+    const room = q.get('room') || 'meeting';
+    termPush('WEBHOOK', `POST ${location.pathname}${location.search.slice(0, 60)}...`, 't-hook');
+    termPush('WEBHOOK', `agent=${agent} · room=${room}`, 't-hook');
+    const a = S.agents.find(x => x.name === agent);
+    if (a) { goToRoom(a, room); } else { spawnInvited({ name: agent, role: '외부', room, color: 'c39bff' }); }
+    addMessage(room, 'agent', { name: agent, role: '외부', color: '#c39bff', icon: '🔗', text: msg });
+    setTimeout(() => { const b = S.agents.find(x => x.name === agent); if (b) say(b, msg.slice(0, 28), 7); }, 900);
+    setView('meet');
+    toast('웹훅 수신 · ' + agent);
+    termPush('OK', '200 OK · message injected', 't-ok');
+    return true;
+  }
+  if (q.get('invite') === '1') {
+    if (q.get('name')) {
+      spawnInvited({ name: q.get('name'), role: q.get('role') || '커스텀', room: q.get('room') || 'work', color: q.get('color') || '' });
+      termPush('INVITE', `URL accepted · ${q.get('name')} · room=${q.get('room') || 'work'}`, 't-ok');
+      return true;
+    }
+    setTimeout(() => openModal('mLink'), 600);
+  }
+  return false;
+}
+
+function boot() {
+  bindTerms();
+  buildInviteModal();
+
+  // seed or load
+  const loaded = load();
+  if (!loaded) seedOffice();
+  // ensure seats/targets
+  S.agents.forEach(a => { if (a.seat && a.seat.kind === 'work') a.homeSeat = a.seat; });
+
+  // terminal banner
+  termPush('SYS', 'MULTI-AGENT OFFICE v2.0 · 3D / 2D PIXEL / MEETING / TERMINAL', 't-sys');
+  termPush('SYS', `agents=${S.agents.length} · rooms=3 · offline-ready · no external deps`, 't-sys');
+  termPush('ORCHESTRATOR', '오피스 가동. `help` 로 명령 목록을 확인하세요.', 't-orc');
+  termPush('EXEC', 'render loop started · 60fps target', 't-exec');
+
+  renderBots(); renderMsgs(); renderNotes(); renderFiles(); syncChrome();
+  showAgentCard(S.agents.find(a => a.role === '총괄') || S.agents[0]);
+  refreshLink();
+  bindCamera();
+  setView('v3d');
+
+  // URL params
+  const viaURL = handleURL();
+
+  // events
+  $$('#segBtns button').forEach(b => b.onclick = () => setView(b.dataset.view));
+  document.getElementById('btnInvite').onclick = () => openModal('mInvite');
+  document.getElementById('btnLink').onclick = () => { refreshLink(); openModal('mLink'); };
+  document.getElementById('btnMeetAll').onclick = () => gatherAll();
+  $$('[data-close]').forEach(b => b.onclick = closeModals);
+  $$('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModals();
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { const t = document.getElementById('meetInput'); if (t && document.activeElement === t) { e.preventDefault(); sendChat(); } }
+  });
+
+  // invite modal
+  document.getElementById('ivRoles').onclick = e => {
+    const b = e.target.closest('button[data-role]'); if (!b) return;
+    ivRole = b.dataset.role;
+    $$('#ivRoles button').forEach(x => x.classList.toggle('sel', x === b));
+    ivColor = ROLES[ivRole].color;
+    $$('#ivColors button').forEach(x => x.classList.toggle('sel', x.dataset.color === ivColor));
+  };
+  document.getElementById('ivColors').onclick = e => {
+    const b = e.target.closest('button[data-color]'); if (!b) return;
+    ivColor = b.dataset.color;
+    $$('#ivColors button').forEach(x => x.classList.toggle('sel', x === b));
+  };
+  document.getElementById('ivGo').onclick = () => {
+    const name = document.getElementById('ivName').value.trim() || pickName(ivRole);
+    const desc = document.getElementById('ivDesc').value.trim();
+    const room = document.getElementById('ivRoom').value;
+    closeModals();
+    spawnInvited({ name, role: ivRole, color: ivColor, room, desc: desc || undefined });
+    document.getElementById('ivName').value = ''; document.getElementById('ivDesc').value = '';
+  };
+  document.getElementById('ivUrl').onclick = () => {
+    const name = document.getElementById('ivName').value.trim() || '제미나이';
+    document.getElementById('lkName').value = name;
+    document.getElementById('lkRole').value = ivRole;
+    document.getElementById('lkRoom').value = document.getElementById('ivRoom').value;
+    lkColor = ivColor;
+    $$('#lkColors button').forEach(x => x.classList.toggle('sel', x.dataset.color === lkColor));
+    closeModals(); refreshLink(); openModal('mLink');
+  };
+
+  // link modal
+  ['lkName', 'lkRole', 'lkRoom'].forEach(id => { const el = document.getElementById(id); el.addEventListener('input', refreshLink); el.addEventListener('change', refreshLink); });
+  document.getElementById('lkColors').onclick = e => {
+    const b = e.target.closest('button[data-lcolor]'); if (!b) return;
+    lkColor = b.dataset.lcolor;
+    $$('#lkColors button').forEach(x => x.classList.toggle('sel', x === b)); refreshLink();
+  };
+  document.getElementById('lkCopy').onclick = () => { const el = document.getElementById('lkUrl'); copyText(el.dataset.raw || el.textContent); toast('초대 주소를 복사했습니다'); };
+  document.getElementById('lkTest').onclick = () => { const c = linkCfg(); closeModals(); spawnInvited(c); termPush('LINK', 'test-enter · ' + c.name, 't-exec'); setView('v3d'); };
+  document.getElementById('lkQrHint').onclick = () => { toast('GitHub Pages: Settings → Pages → Deploy from branch(main / root)'); termPush('SYS', 'GitHub Pages 배포: Settings → Pages → Branch: main / (root). index.html 자동 서빙.', 't-sys'); };
+  document.getElementById('lkHookCopy').onclick = () => { const el = document.getElementById('lkHook'); copyText(el.dataset.raw || el.textContent); toast('웹훅 주소를 복사했습니다'); };
+  document.getElementById('lkHookTest').onclick = () => {
+    const agent = document.getElementById('lkName').value.trim() || '제미나이';
+    const room = document.getElementById('lkRoom').value;
+    closeModals();
+    termPush('WEBHOOK', `simulated POST · agent=${agent} · room=${room}`, 't-hook');
+    if (!S.agents.find(x => x.name === agent)) spawnInvited({ name: agent, role: '리서치', room, color: lkColor });
+    addMessage(room, 'agent', { name: agent, role: '외부', color: lkColor, icon: '🔗', text: '보고: 3D 시안 완료했습니다. 파일함에 올려두었습니다.' });
+    const a = S.agents.find(x => x.name === agent); if (a) say(a, '보고 완료했습니다.', 5);
+    setView('meet');
+  };
+
+  // meeting panel events
+  document.getElementById('botList').onclick = e => {
+    const sw = e.target.closest('[data-toggle]');
+    if (sw) {
+      const a = S.agents.find(x => x.id === sw.dataset.toggle);
+      if (a) { enableAgent(a, !a.enabled); sw.classList.toggle('on', a.enabled); e.stopPropagation(); renderBots(); syncChrome(); save(); }
+      return;
+    }
+    const row = e.target.closest('[data-agent]');
+    if (row) { S.selected = row.dataset.agent; const a = S.agents.find(x => x.id === row.dataset.agent); if (a) { showAgentCard(a); say(a, '부르셨습니까?', 3); } }
+  };
+  document.getElementById('btnAllOn').onclick = () => { S.agents.forEach(a => enableAgent(a, true)); renderBots(); syncChrome(); save(); };
+  document.getElementById('roomTabs').onclick = e => {
+    const b = e.target.closest('[data-room]'); if (!b) return;
+    S.activeRoom = b.dataset.room; renderMsgs();
+  };
+  document.getElementById('btnPlus').onclick = () => openModal('mInvite');
+  document.getElementById('btnSend').onclick = sendChat;
+  const mi = document.getElementById('meetInput');
+  mi.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+  mi.addEventListener('input', () => { mi.style.height = 'auto'; mi.style.height = Math.min(120, mi.scrollHeight) + 'px'; });
+  document.getElementById('btnNote').onclick = () => { addNote(''); renderNotes(); const list = document.getElementById('noteList'); const el = list.lastElementChild; if (el) el.focus(); };
+  document.getElementById('noteList').addEventListener('blur', e => {
+    const n = e.target.closest('[data-note]'); if (!n) return;
+    const note = S.notes.find(x => x.id === n.dataset.note); if (note) { note.text = n.innerText.trim(); save(); }
+  }, true);
+  document.getElementById('noteList').addEventListener('click', e => { const n = e.target.closest('[data-note]'); if (n) n.focus(); });
+  document.getElementById('fileList').onclick = e => {
+    const el = e.target.closest('[data-file]'); if (!el) return;
+    const f = S.files.find(x => x.id === el.dataset.file); if (!f) return;
+    document.getElementById('fvName').textContent = f.name;
+    document.getElementById('fvMeta').textContent = `${f.desc || ''} · ${f.size || ''} · ${new Date(f.at).toLocaleString('ko-KR')}`;
+    document.getElementById('fvBody').textContent = f.body || '내용 미리보기가 없습니다.';
+    openModal('mFile');
+  };
+  document.getElementById('card3d').addEventListener('click', e => {
+    const b = e.target.closest('[data-go]'); if (!b) return;
+    const a = S.agents.find(x => x.id === b.dataset.id); if (!a) return;
+    goToRoom(a, b.dataset.go);
+    toast(a.name + ' → ' + ROOMNAME[b.dataset.go]);
+  });
+  // terminal quick chips
+  document.getElementById('cmdChips') && (document.getElementById('cmdChips').onclick = e => {
+    const b = e.target.closest('[data-cmd-chip]'); if (!b) return;
+    const t = TERM.terms.find(x => x.root.dataset.term === 'full');
+    if (t) { t.input.value = b.dataset.cmdChip; t.input.focus(); }
+  });
+  // dock collapse
+  const dockBtn3 = document.getElementById('btnDock3d'), dockBtn2 = document.getElementById('btnDock2d');
+  dockBtn3.onclick = () => { const d = document.getElementById('dock3d'); d.classList.toggle('min'); dockBtn3.textContent = d.classList.contains('min') ? '⌨ 터미널 열기' : '⌨ 터미널 접기'; resize3(); };
+  dockBtn2.onclick = () => { const d = document.getElementById('dock2d'); d.classList.toggle('min'); dockBtn2.textContent = d.classList.contains('min') ? '⌨ 터미널 열기' : '⌨ 터미널 접기'; setTimeout(fitPixel, 220); };
+  // pixel controls
+  document.getElementById('pxCrt').onclick = e => { const c = document.getElementById('crtFx'); c.classList.toggle('off'); e.currentTarget.style.opacity = c.classList.contains('off') ? .5 : 1; };
+  document.getElementById('pxZoom').onclick = () => { pxZoom = pxZoom >= 4 ? 1.5 : pxZoom + 0.5; C2.style.width = PW * pxZoom + 'px'; C2.style.height = PH * pxZoom + 'px'; };
+  document.getElementById('pxScan').onclick = () => fitPixel();
+
+  window.addEventListener('resize', () => { resize3(); fitPixel(); });
+  const stage = document.getElementById('stage3d');
+  if (window.ResizeObserver) new ResizeObserver(() => resize3()).observe(stage);
+  const wrap2 = document.getElementById('pixwrap');
+  if (window.ResizeObserver) new ResizeObserver(() => { if (S.view === 'v2d') fitPixel(); }).observe(wrap2);
+
+  // clock
+  setInterval(() => {
+    const c = document.getElementById('clock'); if (c) c.textContent = hhmmss(new Date());
+  }, 1000);
+  document.getElementById('clock').textContent = hhmmss(new Date());
+  setInterval(() => { if (S.view === 'term' || S.view === 'meet') syncChrome(); }, 4000);
+
+  // frame loop
+  let last = performance.now(), fpsAcc = 0, fpsN = 0, uiT = 0;
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    tick(dt);
+    if (S.view === 'v3d') render3D(dt);
+    else if (S.view === 'v2d') render2D();
+    termRender();
+    fpsAcc += dt; fpsN++;
+    if (fpsAcc > 0.5) {
+      S.fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0;
+      const f = document.getElementById('fpsChip'); if (f) f.textContent = S.fps + 'fps';
+      if (S.selected) { const a = S.agents.find(x => x.id === S.selected); if (a) showAgentCard(a); }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  emit('messages'); renderMsgs();
+  if (!viaURL) addMessage('meeting', 'sys', { text: '준비 완료. 우측 상단의 초대 버튼이나 터미널 `invite` 로 에이전트를 부를 수 있습니다.' });
+  setTimeout(() => { document.getElementById('clock').textContent = hhmmss(new Date()); }, 200);
+}
+function sendChat() {
+  const el = document.getElementById('meetInput');
+  const v = el.value.trim(); if (!v) return;
+  el.value = ''; el.style.height = '38px';
+  handleChat(v);
+}
+document.addEventListener('DOMContentLoaded', boot);
+
+</script>
+</body>
+</html>
