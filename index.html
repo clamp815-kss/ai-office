@@ -3566,7 +3566,7 @@ function setView(v) {
 function openModal(id) { const m = document.getElementById(id); if (m) m.classList.add('on'); }
 function closeModals() { $$('.modal').forEach(m => m.classList.remove('on')); }
 
-const AG = { editingId: null, provider: 'claude', conn: 'webhook', interval: 5, role: '개발', color: PROVIDERS.claude.color, confirmDel: false };
+const AG = { editingId: null, provider: 'claude', conn: 'manual', interval: 5, role: '개발', color: PROVIDERS.claude.color, confirmDel: false };
 
 function agentModalHTML() {
   // 프리셋
@@ -3608,7 +3608,7 @@ function openAgentModal(agent, prefill) {
   AG.confirmDel = false;
   const pv = agent ? providerOf(agent) : (prefill && prefill.provider ? PROVIDERS[prefill.provider] : PROVIDERS.claude) || PROVIDERS.claude;
   AG.provider = pv.id;
-  AG.conn = agent ? agent.conn : 'webhook';
+  AG.conn = agent ? agent.conn : 'manual';
   AG.interval = agent ? agent.interval : 5;
   AG.role = agent ? agent.role : (prefill && prefill.role ? prefill.role : pv.role);
   AG.color = agent ? agent.color : pv.color;
