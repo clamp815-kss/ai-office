@@ -476,6 +476,55 @@ main{flex:1 1 0;display:flex;min-height:0;overflow:hidden}
 .phead h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .phead .cnt{flex:0 0 auto}
 
+/* ================= v4: 호출 대상 바 · 멘션 자동완성 · 총괄 지휘 ================= */
+.callbar{display:flex;align-items:center;gap:8px;padding:8px 12px 0;flex:0 0 auto;min-width:0}
+.callbar .cb-l{font-size:9.5px;font-weight:800;letter-spacing:.08em;color:#7b7066;white-space:nowrap;flex:0 0 auto}
+.cb-chips{display:flex;align-items:center;gap:5px;overflow-x:auto;padding:1px 0 3px;flex:1 1 auto;min-width:0;scrollbar-width:none}
+.cb-chips::-webkit-scrollbar{height:0}
+.cb{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;white-space:nowrap;
+  background:rgba(255,255,255,.045);border:1px solid var(--line2);color:#b7a99a;font-size:11.5px;font-weight:700;transition:.14s;flex:0 0 auto;
+}
+.cb:hover{color:#f1e5d4;border-color:rgba(246,214,168,.3)}
+.cb .cw{font-size:10px;opacity:.9}
+.cb .r{font-size:9.5px;font-weight:700;color:#8b8074}
+.cb.on{background:linear-gradient(180deg,#f8dcb4,#e6b57a);color:#2a1c0e;border-color:transparent;box-shadow:0 3px 10px rgba(230,181,122,.22)}
+.cb.on .r{color:rgba(42,28,14,.6)}
+.cb.all{border-style:dashed}
+.cb.all.on{border-style:solid}
+.cb.lead-on{box-shadow:inset 0 0 0 1px rgba(246,214,168,.65)}
+.cb-info{font-size:10.5px;color:#8d8175;white-space:nowrap;flex:0 0 auto;font-family:var(--mono)}
+.cb-info b{color:#f0c469}
+.callbar .cb-empty{font-size:11px;color:#7b7066;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 멘션 자동완성 */
+.composer{position:relative}
+.mentionbox{position:absolute;left:12px;right:96px;bottom:calc(100% + 6px);max-height:220px;overflow-y:auto;
+  background:linear-gradient(180deg,#241f19,#1a1713);border:1px solid rgba(246,214,168,.24);border-radius:12px;
+  box-shadow:0 18px 44px rgba(0,0,0,.62);z-index:80;display:none;padding:5px}
+.mentionbox.on{display:block}
+.mi{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer}
+.mi.sel{background:rgba(246,214,168,.14)}
+.mi .av2{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:10px;font-weight:800;background:#2a241e;color:#e6d8c7;flex:0 0 auto}
+.mi .nm2{font-size:12px;font-weight:700;color:#f0e5d6}
+.mi .rl2{font-size:10px;color:#8d8175;margin-left:auto}
+.mi .crown{font-size:10px}
+
+/* 총괄 표시 */
+.msg.lead .bubble{background:linear-gradient(180deg,rgba(246,214,168,.11),rgba(246,214,168,.05));border-color:rgba(246,214,168,.34)}
+.msg.lead .av{background:linear-gradient(160deg,#ffe9c8,#e0a86a)!important;color:#2a1c0e}
+.msg.lead .who b{color:#f6d6a8!important}
+.bubble .mn{color:#ffd79a;font-weight:700;background:rgba(246,214,168,.10);border-radius:4px;padding:0 2px}
+.msg.user .bubble .mn{color:#ffe3ba}
+.bot.lead{background:rgba(246,214,168,.06);border-color:rgba(246,214,168,.3)}
+.cwbadge{width:17px;height:17px;display:grid;place-items:center;font-size:10px;border-radius:5px;background:rgba(255,255,255,.05);opacity:.35;flex:0 0 auto;cursor:pointer}
+.cwbadge.on{opacity:1;background:rgba(246,214,168,.18);box-shadow:inset 0 0 0 1px rgba(246,214,168,.35)}
+.leadtoggle{display:flex;align-items:center;gap:9px;width:100%;padding:10px 12px;border-radius:11px;border:1px solid var(--line2);background:#1b1714;color:#cbbdaf;font-size:12.5px;font-weight:700;text-align:left}
+.leadtoggle .crown{font-size:15px}
+.leadtoggle .state{margin-left:auto;font-size:10.5px;font-family:var(--mono);color:#8d8175}
+.leadtoggle.on{border-color:rgba(246,214,168,.55);background:linear-gradient(180deg,rgba(246,214,168,.16),rgba(246,214,168,.06));color:#f8e6cf}
+.leadtoggle.on .state{color:#f0c469}
+
 </style>
 </head>
 <body>
@@ -655,9 +704,15 @@ main{flex:1 1 0;display:flex;min-height:0;overflow:hidden}
           </div>
           <div class="pend-strip"><span class="ps-l">응답 대기</span><div class="pend" data-pending></div></div>
           <div class="msgs" id="msgs"></div>
+          <div class="callbar" id="callBar">
+            <span class="cb-l">호출 대상</span>
+            <div class="cb-chips" id="cbChips"></div>
+            <span class="cb-info" id="cbInfo">자동 배분</span>
+          </div>
           <div class="composer">
+            <div class="mentionbox" id="mentionBox"></div>
             <button class="plus" id="btnPlus" title="빠른 명령">＋</button>
-            <textarea id="meetInput" rows="1" placeholder="대장님, 지시를 입력하세요 (예: 수원시 3D 시안 마감 상향 알려줘)"></textarea>
+            <textarea id="meetInput" rows="1" placeholder="@이름 또는 @전체로 호출 · @총괄에게 지시하면 하위 에이전트로 전달됩니다"></textarea>
             <button class="send" id="btnSend">보내기</button>
           </div>
         </section>
@@ -746,6 +801,13 @@ main{flex:1 1 0;display:flex;min-height:0;overflow:hidden}
 
     <div class="field"><label>역할</label><div class="pick" id="agRoles"></div></div>
     <div class="field"><label>역할 설명 (선택)</label><input type="text" id="agRoleDesc" placeholder="예: 코드 리뷰 · 배포 자동화"></div>
+
+    <div class="field"><label>총괄 에이전트</label>
+      <button class="leadtoggle" id="agLead" role="switch" aria-checked="false">
+        <span class="crown">👑</span><b>총괄 에이전트로 지정</b><span class="state" id="agLeadState">꺼짐</span>
+      </button>
+      <div class="hintline">한 명만 지정됩니다. 총괄에게 지시하면 계획을 세워 다른 에이전트에게 <b>@이름</b> 으로 하위 지시를 내리고, 지시받은 에이전트가 각자 응답 시간대로 이어서 답합니다.</div>
+    </div>
 
     <div class="field"><label>응답 시간</label><div class="pick intervals" id="agIntervals"></div>
       <div class="hintline">지시를 보내면 이 시간이 응답 한도가 됩니다. 지나면 카드와 대기열에 <b>지연</b>으로 표시됩니다.</div>
@@ -851,6 +913,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtText = s => esc(s).replace(/@([가-힣A-Za-z0-9_]+)/g, '<span class="mn">@$1</span>');
 const TAU = Math.PI * 2;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -1078,7 +1141,7 @@ function findPath(sx, sy, tx, ty) {
 /* ---------------- state ---------------- */
 const S = {
   time: 0, view: 'v3d', activeRoom: 'meeting', running: false, taskName: '',
-  agents: [], messages: [], notes: [], files: [], queue: [], log: [],
+  agents: [], messages: [], notes: [], files: [], queue: [], log: [], callTargets: [],
   selected: null, hover: null, cameraLocked: false,
   stats: { tasks: 0, msgs: 0 }, fps: 60, t0: performance.now(), wander: 3,
 };
@@ -1112,7 +1175,7 @@ function addAgent(def, opts = {}) {
     interval: INTERVALS.includes(Number(def.interval)) ? Number(def.interval) : 5,
     x: opts.x ?? 8.0, y: opts.y ?? 10.15, facing: -Math.PI / 2, path: [], walk: 0,
     state: 'moving', seat: null, room: 'work', bubble: null, typing: 0, anim: Math.random() * 9,
-    since: Date.now(), src: def.src || 'user', homeRoom: def.seat || 'work',
+    since: Date.now(), src: def.src || 'user', homeRoom: def.seat || 'work', lead: !!def.lead,
   };
   S.agents.push(a);
   if (opts.autoSeat !== false) {
@@ -1138,9 +1201,12 @@ function sitAt(a, seat) {
 }
 function standUp(a) {
   if (a.seat) { a.seat.by = null; a.seat = null; }
+  if (a.seatTarget && a.seatTarget.by === a.id) a.seatTarget.by = null;
+  a.seatTarget = null;
 }
 function walkTo(a, x, y, seat) {
   standUp(a);
+  if (seat) seat.by = a.id;   // 자리 예약 — 여러 명이 같은 자리로 몰리는 것을 막는다
   a.state = 'moving'; a.seatTarget = seat || null;
   a.path = findPath(a.x, a.y, x, y);
   if (!a.path.length) a.path = [{ x, y }];
@@ -1276,7 +1342,7 @@ function save() {
         name: a.name, role: a.role, tag: a.tag, color: a.color, icon: a.icon, desc: a.desc, enabled: a.enabled,
         seat: a.seat ? a.seat.id : null, room: a.seat ? a.seat.kind : (a.homeRoom || 'work'),
         model: a.model, src: a.src, provider: a.provider, conn: a.conn, endpoint: a.endpoint,
-        apiKey: a.apiKey, interval: a.interval, homeRoom: a.homeRoom,
+        apiKey: a.apiKey, interval: a.interval, homeRoom: a.homeRoom, lead: !!a.lead,
       })),
       messages: S.messages.slice(-60), notes: S.notes, files: S.files.slice(0, 20), stats: S.stats,
     }));
@@ -1297,7 +1363,7 @@ function load() {
         bubble: null, typing: 0, anim: 0, src: x.src || 'user', since: Date.now() - 1e6,
         provider: pv.id, conn: CONNS[x.conn] ? x.conn : 'manual', endpoint: x.endpoint || '',
         apiKey: x.apiKey || '', interval: INTERVALS.includes(Number(x.interval)) ? Number(x.interval) : 5,
-        homeRoom: x.homeRoom || x.room || 'work',
+        homeRoom: x.homeRoom || x.room || 'work', lead: !!x.lead,
       };
       const st = x.seat ? [...SEATS.work, ...SEATS.meeting, ...SEATS.lounge, ...SEATS.command].find(s => s.id === x.seat && !s.by) : null;
       if (st && a.enabled) {
@@ -1856,6 +1922,29 @@ function drawAgent3(a) {
   const dep = depthOf(a.x, a.y, 0.5);
   if (dep < 0.3) return;
   floorDisc(a.x, a.y, 0.34, 'rgba(0,0,0,.32)');
+  // 지시를 받아 작업 중인 에이전트 — 바닥 진행 링
+  const wj = newestJob(a);
+  if (wj) {
+    const frac = clamp(1 - (wj.dueAt - Date.now()) / Math.max(1, wj.dueAt - wj.sentAt), 0, 1);
+    const R = 0.5;
+    const ring = (f, col, lw) => {
+      const n = Math.max(2, Math.round(f * 40)), pts = [];
+      for (let i = 0; i <= n; i++) {
+        const th = -Math.PI / 2 + (i / 40) * TAU;
+        const p = proj(a.x + Math.cos(th) * R, a.y + Math.sin(th) * R, 0.02);
+        if (!p) return; pts.push(p);
+      }
+      ctx3.save();
+      ctx3.beginPath(); ctx3.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx3.lineTo(pts[i].x, pts[i].y);
+      ctx3.strokeStyle = col; ctx3.lineWidth = lw; ctx3.lineCap = 'round'; ctx3.stroke();
+      ctx3.restore();
+    };
+    ring(1, 'rgba(0,0,0,.5)', 2.6);
+    ring(Math.max(0.03, frac), rgba(a.color, .95), 3.2);
+    const pulse = 0.5 + 0.5 * Math.sin(S.time * 3 + a.anim);
+    floorDisc(a.x, a.y, 0.42 + pulse * 0.1, rgba(a.color, 0.05 + pulse * 0.07));
+  }
   if (S.selected === a.id) {
     const ring = [];
     for (let i = 0; i < 26; i++) { const t = i / 26 * TAU; ring.push([a.x + Math.cos(t) * 0.4, a.y + Math.sin(t) * 0.4, 0.01]); }
@@ -1962,23 +2051,27 @@ function drawRoomLabels() {
 }
 function drawLabels3() {
   if (!showLabels) return;
-  for (const a of S.agents) {
-    if (!a.enabled) continue;
+  const order = S.agents.filter(a => a.enabled).slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+  order.forEach((a, i) => {
+    // 옆자리 이름표끼리 겹치지 않도록 위아래로 엇갈리게
     const p = proj(a.x, a.y, 1.32);
-    if (!p) continue;
+    if (!p) return;
+    const pY = p.y - (i % 3) * 20;
     const isSel = S.selected === a.id;
+    const wj = newestJob(a);
+    const label = (a.lead ? '👑 ' : '') + a.name + (wj ? ' ⚡' + jobClock(wj) : '');
     ctx3.save();
     ctx3.font = `700 ${isSel ? 12 : 10.5}px -apple-system, "Noto Sans KR", sans-serif`;
-    const w = ctx3.measureText(a.name).width + (isSel ? 16 : 12);
-    const x = p.x - w / 2, y = p.y - 14;
-    ctx3.globalAlpha = isSel ? 1 : 0.88;
-    ctx3.fillStyle = isSel ? 'rgba(246,214,168,.97)' : 'rgba(16,14,12,.72)';
+    const w = ctx3.measureText(label).width + (isSel ? 16 : 12);
+    const x = p.x - w / 2, y = pY - 14;
+    ctx3.globalAlpha = isSel || wj ? 1 : 0.88;
+    ctx3.fillStyle = isSel ? 'rgba(246,214,168,.97)' : wj ? rgba(a.color, .94) : 'rgba(16,14,12,.72)';
     roundRect(ctx3, x, y, w, isSel ? 19 : 17, 6); ctx3.fill();
-    if (!isSel) { ctx3.strokeStyle = rgba(a.color, .5); ctx3.lineWidth = 1; ctx3.stroke(); }
-    ctx3.fillStyle = isSel ? '#2a1c0e' : '#eadfce'; ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
-    ctx3.fillText(a.name, p.x, y + (isSel ? 10 : 9));
+    if (!isSel && !wj) { ctx3.strokeStyle = rgba(a.lead ? '#f6d6a8' : a.color, a.lead ? .8 : .5); ctx3.lineWidth = 1; ctx3.stroke(); }
+    ctx3.fillStyle = (isSel || wj) ? '#20170f' : '#eadfce'; ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
+    ctx3.fillText(label, p.x, y + (isSel ? 10 : 9));
     ctx3.restore();
-  }
+  });
 }
 
 /* ---------------- render ---------------- */
@@ -2720,6 +2813,8 @@ function drawAgent2(a) {
     g.beginPath(); g.arc(hx, top - 12, r, 0, TAU); g.stroke();
     g.strokeStyle = shade(a.color, .35); g.lineWidth = 2;
     g.beginPath(); g.arc(hx, top - 12, r, -Math.PI / 2, -Math.PI / 2 + TAU * t); g.stroke();
+    g.font = '800 10px "Noto Sans KR",sans-serif'; g.textAlign = 'center'; g.fillStyle = '#ffe6b0';
+    g.fillText('⚡', hx + 16, top - 20);
     g.restore();
   }
 }
@@ -2727,7 +2822,7 @@ function drawAgent2(a) {
 function drawName2(a, hx, top, feet) {
   const g = ctx2;
   const pv = providerOf(a);
-  const label = a.name;
+  const label = (a.lead ? '👑 ' : '') + a.name;
   g.font = '600 9px "Noto Sans KR","Malgun Gothic",sans-serif';
   const tw = Math.ceil(g.measureText(label).width);
   const iconW = 11;
@@ -3008,7 +3103,7 @@ function renderPending() {
       const late = Date.now() > j.dueAt;
       html += `<div class="pend-row ${late ? 'late' : ''}">
         <span class="pd" style="background:${esc(pv.color)}"></span>
-        <b>${esc(j.name)}</b>
+        <b>${(j.depth || 0) > 0 ? '↳ ' : ''}${(a && a.lead) || j.lead ? '👑 ' : ''}${esc(j.name)}</b>
         <span class="pc">${esc(intervalLabel(a ? a.interval : 5))}</span>
         <span class="pt">${late ? '지연 ' : ''}${jobClock(j)}</span>
       </div>`;
@@ -3041,13 +3136,14 @@ function completeJob(job, text) {
   if (!job || job.state !== 'pending') return;
   job.state = 'done'; job.replyAt = Date.now(); job.reply = String(text == null ? '' : text).slice(0, 4000);
   const a = S.agents.find(x => x.id === job.agentId);
-  addMessage(job.room, 'agent', {
-    name: job.name, text: job.reply, color: a ? a.color : '#c39bff',
-    icon: a ? a.icon : '🤖', role: a ? a.role : '', provider: a ? a.provider : job.provider,
+  addMessage(job.room, (a && a.lead) ? 'lead' : 'agent', {
+    name: job.name + ((a && a.lead) ? ' · 총괄' : ''), text: job.reply, color: a ? a.color : '#c39bff',
+    icon: (a && a.lead) ? '👑' : (a ? a.icon : '🤖'), role: a ? a.role : '', provider: a ? a.provider : job.provider,
   });
-  if (a) say(a, '응답 도착', 3.2);
+  if (a) say(a, (a.lead && job.orchestrate) ? '하위 지시 중' : '응답 도착', 3.4);
   const took = ((job.replyAt - job.sentAt) / 1000).toFixed(1);
   termPush('REPLY', `@${job.name} · ${took}s · ${shortText(job.reply.replace(/\s+/g, ' '), 70)}`, 't-ok');
+  if (job.orchestrate && (job.depth || 0) < MAX_DEPTH) delegateFromLead(job);
   if (!S.jobs.some(j => j.state === 'pending')) setRunState(false);
   renderPending(); renderMsgs(); save();
 }
@@ -3088,9 +3184,19 @@ async function callAgent(a, job) {
     if (!a.endpoint) { failJob(job, '엔드포인트 URL이 없습니다. 에이전트 편집에서 입력하세요.'); return; }
     termPush('POST', `${a.endpoint.slice(0, 70)} · agent=${a.name}`, 't-hook');
     try {
+      const payload = {
+        agent: a.name, provider: a.provider, role: a.role, room: job.room,
+        message: job.prompt || job.text, sentAt: job.sentAt,
+      };
+      if (job.orchestrate) {
+        payload.instruction = job.text;
+        payload.orchestration = true;
+        payload.teammates = (job.orchestrate.pool || []).filter(x => x.id !== a.id).map(x => ({ name: x.name, role: x.role, desc: x.desc || '' }));
+        payload.format = '하위 지시는 "@이름 → 내용" 형식으로 한 줄씩';
+      }
       const res = await fetch(a.endpoint, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent: a.name, provider: a.provider, role: a.role, room: job.room, message: job.text, sentAt: job.sentAt }),
+        body: JSON.stringify(payload),
       });
       const raw = await res.text();
       let out = raw;
@@ -3110,7 +3216,7 @@ async function callAgent(a, job) {
     try {
       const res = await fetch(spec.url(a.apiKey), {
         method: 'POST', headers: spec.headers(a.apiKey),
-        body: JSON.stringify(spec.body(job.text)),
+        body: JSON.stringify(spec.body(job.prompt || job.text)),
       });
       const raw = await res.text();
       let j = null; try { j = JSON.parse(raw); } catch (e) { }
@@ -3126,24 +3232,31 @@ async function callAgent(a, job) {
 
 function sendToAgent(a, text, room, opts) {
   if (!a) return null;
-  const addUser = !(opts && opts.noUser);
+  const o = opts || {};
+  const addUser = !o.noUser;
+  const depth = Number(o.depth) || 0;
   const now = Date.now();
   const job = {
     id: 'j' + (++jobSeq), agentId: a.id, name: a.name, text: String(text || '').trim(),
     room: room || S.activeRoom, sentAt: now,
     dueAt: now + Math.max(0.5, Number(a.interval) || 5) * 60000,
-    state: 'pending', provider: a.provider,
+    state: 'pending', provider: a.provider, depth, parentId: o.parentId || null,
+    taskId: o.taskId || null, orchestrate: o.orchestrate || null, lead: !!a.lead,
   };
+  if (job.orchestrate) job.prompt = leadPrompt(a, job.text, o.orchestrate);
   S.jobs.push(job);
   if (S.jobs.length > 80) S.jobs.splice(0, S.jobs.length - 80);
-  if (addUser) addMessage(job.room, 'user', { name: '현우', text: job.text, color: '#f6d6a8', icon: '🧑‍💼' });
-  termPush('DISPATCH', `@${a.name} → ${providerOf(a).name} · ${connOf(a).conn ? connOf(a).name : connOf(a).name} · 응답한도 ${intervalLabel(a.interval)}`, 't-exec');
+  if (addUser) addMessage(job.room, 'user', { name: '현우', text: o.displayText || job.text, color: '#f6d6a8', icon: '🧑‍💼' });
+  termPush(job.orchestrate ? 'LEAD-JOB' : 'DISPATCH', `${depth ? '↳ ' : ''}@${a.name}${job.orchestrate ? ' 👑 지휘' : ''} → ${providerOf(a).name} · ${connOf(a).conn ? connOf(a).name : connOf(a).name} · 응답한도 ${intervalLabel(a.interval)}`, 't-exec');
   setRunState(true);
   renderPending(); renderMsgs();
   if (a.conn === 'sim') {
-    setTimeout(() => completeJob(job, `[시뮬레이션] "${shortText(job.text, 40)}" 요청을 접수했습니다. 실제 답변은 에이전트 편집에서 웹훅이나 API를 연결하면 받을 수 있습니다.`), 1100);
+    if (job.orchestrate) setTimeout(() => completeJob(job, leadPlanText(a, job.text, o.orchestrate)), 1200);
+    else setTimeout(() => completeJob(job, job.depth > 0
+      ? `[시뮬레이션] 하위 지시 접수 — "${shortText(job.text, 44)}" · 실제 응답은 에이전트 편집에서 웹훅이나 API를 연결하면 도착합니다.`
+      : `[시뮬레이션] "${shortText(job.text, 40)}" 요청을 접수했습니다. 실제 답변은 에이전트 편집에서 웹훅이나 API를 연결하면 받을 수 있습니다.`), 1100);
   } else if (a.conn === 'manual') {
-    termPush('WAIT', `@${a.name} 수동 응답 대기 · 터미널에 reply ${a.name} <내용> 또는 응답 입력`, 't-warn');
+    termPush('WAIT', `@${a.name} 수동 응답 대기 · 터미널에 reply ${a.name} <내용>${job.orchestrate ? ' · @이름 멘션으로 하위 지시' : ''}`, 't-warn');
   } else {
     callAgent(a, job);
   }
@@ -3151,31 +3264,265 @@ function sendToAgent(a, text, room, opts) {
 }
 
 /* ---------------- orchestration ---------------- */
-let taskSeq = 0;
-async function runTask(text, room) {
+let taskSeq = 0, leadSeq = 0;
+const MAX_DEPTH = 1;
+const LEAD_MAX_MATES = 5;
+const DUTY = {
+  '총괄': '전체 일정과 우선순위를 정리하고 진행 상황을 취합',
+  '기획': '요구사항과 일정·우선순위를 문서로 정리',
+  '개발': '구현 항목을 나눠 코드·빌드 작업 진행',
+  '디자인': '화면 시안과 비주얼 가이드 초안 제작',
+  '리서치': '관련 자료와 사례를 조사해 근거 정리',
+  '마케팅': '캠페인 카피와 채널 배포안 작성',
+  '커스텀': '맡은 역할 기준으로 초안 작성',
+};
+
+async function runTask(text, room, opts) {
   room = room || S.activeRoom;
+  const o = opts || {};
   const clean = String(text || '').trim();
   if (!clean) return;
-  if (!S.agents.filter(a => a.enabled).length) {
+  const on = enabledAgents();
+  if (!on.length) {
     termPush('WARN', '에이전트가 없습니다. ＋ 에이전트 추가 로 먼저 등록하세요.', 't-warn');
     toast('에이전트를 먼저 추가하세요');
     openAgentModal(null);
     return;
   }
-  const team = chooseTeam(clean);
+  let team = o.team && o.team.length ? o.team.filter(a => a.enabled) : chooseTeam(clean);
+  if (!team.length) team = on.slice(0, 6);
   const tid = 'T' + String(++taskSeq).padStart(3, '0');
-  termPush('DISPATCH', `task=${tid} · route=${ROOMNAME[room]} · ${team.length}명 · ${team.map(a => '@' + a.name + '(' + intervalLabel(a.interval) + ')').join(', ')}`, 't-orc');
-  team.forEach(a => { if (!a.seat || a.seat.kind !== room) goToRoom(a, room === 'lounge' ? 'lounge' : 'meeting'); });
+  termPush('DISPATCH', `task=${tid}${o.label ? ' · ' + o.label : ''} · route=${ROOMNAME[room]} · ${team.length}명 · ${team.map(a => '@' + a.name + '(' + intervalLabel(a.interval) + ')').join(', ')}`, 't-orc');
+  team.forEach(a => { if (!a.seat || a.seat.kind !== room) goToRoom(a, ['meeting', 'command', 'lounge'].includes(room) ? room : 'meeting'); });
   await sleep(420);
   let first = true;
   for (const a of team) {
-    sendToAgent(a, clean, room, { noUser: !first });
+    sendToAgent(a, clean, room, { noUser: !first, displayText: first ? o.displayText : null, depth: 0, taskId: tid });
     first = false;
     await sleep(160);
   }
   S.stats.tasks++;
   addMessage(room, 'sys', { text: `${team.map(a => a.name).join(', ')}에게 전달했습니다. 응답 시간 ${team.map(a => a.name + ' ' + intervalLabel(a.interval)).join(' · ')} · 도착하면 이 방에 표시됩니다.` });
   syncChrome();
+}
+
+/* ============================================================
+   v4 — 호출 대상 · @멘션 · 총괄 지휘(오케스트레이션)
+   ============================================================ */
+function enabledAgents() { return S.agents.filter(a => a.enabled); }
+function leadAgent() { return S.agents.find(a => a.lead) || null; }
+function setLeadAgent(a) {
+  S.agents.forEach(x => { x.lead = a ? x.id === a.id : false; });
+  save(); renderBots(); renderCallBar(); syncChrome();
+  if (a) {
+    termPush('LEAD', `${a.name} 을(를) 총괄 에이전트로 지정 · @${a.name} 로 지휘 가능`, 't-ok');
+    addMessage(S.activeRoom, 'sys', { text: `👑 ${a.name} 이(가) 총괄 에이전트가 되었습니다. @${a.name} 또는 총괄 칩을 고르고 지시하면 팀원에게 하위 지시를 냅니다.` });
+    toast(a.name + ' · 총괄 에이전트 지정');
+  } else {
+    termPush('LEAD', '총괄 에이전트 해제', 't-warn');
+    toast('총괄 에이전트를 해제했습니다');
+  }
+}
+function selectedTargets() {
+  return S.callTargets.map(id => S.agents.find(a => a.id === id)).filter(a => a && a.enabled);
+}
+function toggleTarget(id) {
+  const i = S.callTargets.indexOf(id);
+  if (i >= 0) S.callTargets.splice(i, 1); else S.callTargets.push(id);
+  renderCallBar();
+}
+function selectAllTargets() {
+  const on = enabledAgents();
+  const allOn = on.length > 0 && S.callTargets.length === on.length;
+  S.callTargets = allOn ? [] : on.map(a => a.id);
+  renderCallBar();
+}
+function renderCallBar() {
+  const chips = document.getElementById('cbChips');
+  const info = document.getElementById('cbInfo');
+  if (!chips) return;
+  S.callTargets = S.callTargets.filter(id => S.agents.some(a => a.id === id && a.enabled));
+  const on = enabledAgents();
+  if (!on.length) {
+    chips.innerHTML = `<span class="cb-empty">에이전트를 추가하면 여기에 @이름 호출 칩이 생깁니다</span>`;
+    if (info) info.textContent = '0명';
+    return;
+  }
+  const lead = leadAgent();
+  const allOn = S.callTargets.length === on.length;
+  chips.innerHTML =
+    `<button class="cb all ${allOn ? 'on' : ''}" data-call-all title="활성 에이전트 전원 호출">@전체 <span class="r">${on.length}</span></button>` +
+    on.map(a => {
+      const sel = S.callTargets.includes(a.id);
+      const isLead = !!(lead && lead.id === a.id);
+      return `<button class="cb ${sel ? 'on' : ''} ${isLead ? 'lead-on' : ''}" data-call="${a.id}" title="${esc(a.name)} · ${esc(a.role)} · 응답 ${esc(intervalLabel(a.interval))}${isLead ? ' · 총괄' : ''}"><span class="cw" style="color:${sel ? 'inherit' : esc(a.color)}">${isLead ? '👑' : esc(providerOf(a).icon)}</span>@${esc(a.name)}</button>`;
+    }).join('');
+  if (info) {
+    if (!S.callTargets.length) info.innerHTML = '자동 배분';
+    else if (S.callTargets.length === 1) {
+      const a = S.agents.find(x => x.id === S.callTargets[0]);
+      info.innerHTML = (a && a.lead) ? '<b>👑 총괄 지휘</b>' : '<b>1명</b> 호출';
+    } else info.innerHTML = `<b>${S.callTargets.length}명</b> 호출`;
+  }
+}
+
+/* --- 멘션 파싱 --- */
+const nameKey = s => String(s || '').replace(/\s+/g, '');
+function findAgentByName(tok) {
+  const q = nameKey(tok);
+  if (!q) return null;
+  return S.agents.find(a => nameKey(a.name) === q)
+    || S.agents.find(a => nameKey(a.name).startsWith(q))
+    || S.agents.find(a => q.startsWith(nameKey(a.name)));
+}
+function parseCall(raw) {
+  const text = String(raw || '').trim();
+  const out = { all: false, targets: [], body: text };
+  const cuts = [];
+  const re = /@([가-힣A-Za-z0-9_]+)/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const tok = m[1];
+    if (tok === '전체' || tok.toLowerCase() === 'all') {
+      out.all = true; cuts.push([m.index, m.index + m[0].length]); continue;
+    }
+    const a = findAgentByName(tok);
+    if (!a) continue;
+    if (!out.targets.includes(a)) out.targets.push(a);
+    cuts.push([m.index, m.index + m[0].length]);
+  }
+  if (cuts.length) {
+    let s = '', last = 0;
+    cuts.sort((x, y) => x[0] - y[0]).forEach(([s0, e0]) => { s += text.slice(last, s0); last = e0; });
+    s += text.slice(last);
+    out.body = s.replace(/^[\s:：,·\-–—>→]+/, '').replace(/\s{2,}/g, ' ').trim();
+  }
+  return out;
+}
+function splitDelegations(text) {
+  const src = String(text || '');
+  const marks = [];
+  const re = /@([가-힣A-Za-z0-9_]+)/g;
+  let m;
+  while ((m = re.exec(src))) {
+    const a = findAgentByName(m[1]);
+    if (a) marks.push({ agent: a, start: m.index, end: m.index + m[0].length });
+  }
+  const out = [];
+  marks.forEach((mk, i) => {
+    if (out.some(o => o.agent.id === mk.agent.id)) return;
+    const next = marks[i + 1] ? marks[i + 1].start : src.length;
+    let body = src.slice(mk.end, next)
+      .replace(/^[\s:：,·\-–—>→]+/, '')
+      .split('\n').filter(l => l.trim()).map(l => l.trim()).join(' ')
+      .replace(/[\s;]+$/, '');
+    out.push({ agent: mk.agent, text: body || '위 지시를 바탕으로 맡은 역할을 진행하고 결과를 보고하세요.' });
+  });
+  return out;
+}
+function leadPrompt(lead, instruction, orch) {
+  const mates = (orch.pool || []).filter(a => a.id !== lead.id);
+  const roster = mates.length
+    ? mates.map(a => `- ${a.name} (${a.role})${a.desc ? ' — ' + shortText(a.desc, 60) : ''}`).join('\n')
+    : '- (없음)';
+  return [
+    `당신은 이 AI 오피스의 총괄 에이전트 "${lead.name}"입니다. 역할: ${lead.role}${lead.desc ? ' — ' + lead.desc : ''}`,
+    '',
+    '아래 지시를 분석해 팀원에게 하위 업무를 나눠 지시하세요.',
+    '', '[팀원]', roster, '', '[지시]', instruction, '', '[응답 형식]',
+    '1) 먼저 1~3문장으로 전체 계획을 요약합니다.',
+    '2) 이어서 각 팀원에게 맡길 하위 지시를 한 줄씩 씁니다. 반드시 "@이름 → 지시 내용" 형식입니다.',
+    '   예) @클로드 → 랜딩페이지 히어로 섹션 HTML/CSS 초안 작성 후 3줄로 보고',
+    '3) 지시할 팀원이 없으면 "배분 없음"이라고 씁니다. 자신의 이름은 @로 부르지 마세요.',
+  ].join('\n');
+}
+function leadPlanText(lead, instruction, orch) {
+  const snip = shortText(String(instruction || '').replace(/\s+/g, ' '), 46);
+  const mates = ((orch && orch.pool) || []).filter(a => a.enabled && a.id !== lead.id).slice(0, LEAD_MAX_MATES);
+  if (!mates.length) return `지시 "${snip}" 를 직접 처리합니다. 배분할 팀원이 없습니다.`;
+  const lines = mates.map(a => `@${a.name} → "${snip}" 관련해 ${DUTY[a.role] || DUTY['커스텀']} 작업을 맡아 결과를 3줄로 보고해 주세요.`);
+  return `지시 "${snip}" 를 분석해 ${mates.length}개 업무로 나눴습니다. 순서대로 진행하고 결과를 취합하겠습니다.\n` + lines.join('\n');
+}
+
+function orchestrate(lead, instruction, room, pool, displayText) {
+  room = room || S.activeRoom;
+  const text = String(instruction || '').trim();
+  if (!text) { toast('총괄에게 내릴 지시를 입력하세요'); return; }
+  if (!lead || !lead.enabled) { toast('총괄 에이전트가 꺼져 있어 지휘할 수 없습니다'); return; }
+  const mates = ((pool && pool.length ? pool : enabledAgents())
+    .filter(a => a.enabled && a.id !== lead.id)).slice(0, LEAD_MAX_MATES);
+  if (!mates.length) {
+    addMessage(room, 'sys', { text: `👑 ${lead.name}(총괄) 혼자 처리합니다. 다른 에이전트를 추가하면 하위 지시로 나눠 맡깁니다.` });
+    sendToAgent(lead, text, room, { depth: 0, taskId: 'L' + String(++leadSeq).padStart(3, '0'), displayText: displayText || text });
+    return;
+  }
+  const tid = 'L' + String(++leadSeq).padStart(3, '0');
+  termPush('LEAD', `총괄 지휘 ${tid} · @${lead.name} → ${mates.map(a => '@' + a.name).join(', ')}`, 't-orc');
+  // 무대 연출: 총괄은 지휘실, 팀원은 회의실(현재 방)로
+  goToRoom(lead, 'command');
+  const mateRoom = ['meeting', 'command', 'lounge'].includes(room) ? room : 'meeting';
+  mates.forEach(a => goToRoom(a, mateRoom));
+  const j = sendToAgent(lead, text, room, { depth: 0, taskId: tid, orchestrate: { pool: mates, instruction: text }, displayText: displayText || text });
+  addMessage(room, 'sys', { text: `👑 ${lead.name}(총괄)에게 지휘를 맡겼습니다. 총괄의 계획과 @하위 지시가 도착하면, 지시받은 ${mates.length}명이 각자 응답 시간대로 이어서 보고합니다.` });
+  if (j) { S.selected = lead.id; showAgentCard(lead); }
+  syncChrome();
+}
+
+function delegateFromLead(job) {
+  const lead = S.agents.find(a => a.id === job.agentId);
+  if (!lead || !job) return;
+  if ((job.depth || 0) >= MAX_DEPTH) return;
+  const orch = job.orchestrate || {};
+  const pool = (orch.pool && orch.pool.length ? orch.pool : enabledAgents())
+    .filter(a => a.enabled && a.id !== lead.id);
+  let subs = splitDelegations(job.reply || '')
+    .filter(s => s.agent && s.agent.enabled && s.agent.id !== lead.id);
+  if (!subs.length) {
+    const mates = pool.slice(0, LEAD_MAX_MATES);
+    if (!mates.length) {
+      addMessage(job.room, 'sys', { text: '총괄이 배분할 팀원을 찾지 못했습니다. 다른 에이전트를 추가하거나 @이름 으로 직접 지시하세요.' });
+      return;
+    }
+    subs = mates.map(a => ({ agent: a, text: `"${shortText(job.text, 42)}" 관련해 ${DUTY[a.role] || DUTY['커스텀']} 작업을 진행하고 결과를 3줄로 보고해 주세요.` }));
+    addMessage(job.room, 'sys', { text: `총괄 응답에 @멘션이 없어 역할 기준으로 자동 분배했습니다 (${mates.length}명).` });
+  }
+  const uniq = [];
+  subs.forEach(s => { if (!uniq.some(u => u.agent.id === s.agent.id)) uniq.push(s); });
+  const final = uniq.slice(0, LEAD_MAX_MATES);
+  addMessage(job.room, 'lead', {
+    name: `${lead.name} · 하위 지시`, icon: '👑', color: lead.color, role: '총괄',
+    text: `${final.map(s => `@${s.agent.name}(${s.agent.role})`).join(' · ')} 에게 하위 지시를 내렸습니다.\n각자 설정된 응답 시간대로 진행하고 결과를 이 방에 보고합니다.`,
+  });
+  termPush('LEAD', `하위 지시 ${final.length}건 → ${final.map(s => '@' + s.agent.name).join(', ')} · depth=${(job.depth || 0) + 1}/${MAX_DEPTH}`, 't-orc');
+  let i = 0;
+  const step = () => {
+    const s = final[i++];
+    if (!s) { syncChrome(); return; }
+    sendToAgent(s.agent, s.text, job.room, { noUser: true, depth: (job.depth || 0) + 1, parentId: job.id, taskId: job.taskId });
+    if (i < final.length) setTimeout(step, 380);
+  };
+  step();
+}
+
+async function dispatchAll(text, room, displayText) {
+  const team = enabledAgents();
+  if (!team.length) { toast('호출할 에이전트가 없습니다'); openAgentModal(null); return; }
+  await runTask(text, room, { team, label: `전체 호출 ${team.length}명`, displayText: displayText || text });
+}
+
+async function dispatchTo(targets, body, room, displayText, opts) {
+  const list = targets.filter(a => a.enabled);
+  if (!list.length) { toast('선택한 에이전트가 모두 꺼져 있습니다'); return; }
+  const o = opts || {};
+  const lead = leadAgent();
+  const allSelected = list.length === enabledAgents().length;
+  if (lead && lead.enabled && list.some(a => a.id === lead.id) && (o.explicit || !allSelected)) {
+    const mates = list.filter(a => a.id !== lead.id);
+    orchestrate(lead, body, room, mates.length ? mates : null, displayText);
+    return;
+  }
+  const label = list.length === 1 ? `단독 호출 @${list[0].name}` : `${list.length}명 호출`;
+  await runTask(body, room, { team: list, label, displayText: displayText || body });
 }
 
 /* ---------------- invite / link ---------------- */
@@ -3240,6 +3587,77 @@ function pickName(role) {
   return pool.find(n => !used.has(n)) || '게스트' + (S.agents.length + 1);
 }
 
+/* ---------------- 멘션 자동완성 ---------------- */
+const MENT = { open: false, items: [], idx: 0, start: 0, end: 0 };
+function mentionCandidates() {
+  const list = [{ id: '__all', name: '전체', role: enabledAgents().length + '명 전원 호출', icon: '📣', all: true }];
+  enabledAgents().forEach(a => list.push({ id: a.id, name: a.name, role: a.role, icon: providerOf(a).icon, color: a.color, lead: !!a.lead }));
+  return list;
+}
+function mentionToken() {
+  const el = document.getElementById('meetInput');
+  if (!el) return null;
+  const pos = el.selectionStart == null ? el.value.length : el.selectionStart;
+  const before = el.value.slice(0, pos);
+  const m = before.match(/@([가-힣A-Za-z0-9_]*)$/);
+  if (!m) return null;
+  return { q: m[1], start: pos - m[0].length, end: pos };
+}
+function hideMention() {
+  MENT.open = false;
+  const b = document.getElementById('mentionBox');
+  if (b) { b.classList.remove('on'); b.innerHTML = ''; }
+}
+function renderMention() {
+  const box = document.getElementById('mentionBox'); if (!box) return;
+  const tok = mentionToken();
+  if (!tok) { hideMention(); return; }
+  const q = tok.q.toLowerCase();
+  const items = mentionCandidates().filter(x => !q || nameKey(x.name).toLowerCase().includes(q) || String(x.role || '').toLowerCase().includes(q));
+  if (!items.length) { hideMention(); return; }
+  MENT.open = true; MENT.items = items; MENT.start = tok.start; MENT.end = tok.end;
+  MENT.idx = clamp(MENT.idx, 0, items.length - 1);
+  box.innerHTML = items.map((x, i) => `<div class="mi ${i === MENT.idx ? 'sel' : ''}" data-mention="${i}">
+      <span class="av2" style="color:${x.color ? shade(x.color, .32) : '#f6d6a8'}">${x.lead ? '👑' : esc(x.icon || '@')}</span>
+      <span class="nm2">@${esc(x.name)}</span>
+      <span class="rl2">${esc(x.role || '')}</span>
+    </div>`).join('');
+  box.classList.add('on');
+}
+function applyMention(i) {
+  const el = document.getElementById('meetInput');
+  if (!el || !MENT.items.length) return;
+  const it = MENT.items[i]; if (!it) return;
+  const v = el.value;
+  el.value = v.slice(0, MENT.start) + '@' + it.name + ' ' + v.slice(MENT.end);
+  const caret = MENT.start + it.name.length + 2;
+  try { el.setSelectionRange(caret, caret); } catch (e) { }
+  hideMention(); el.focus();
+  el.style.height = 'auto'; el.style.height = Math.min(120, el.scrollHeight) + 'px';
+}
+function mentionKey(e) {
+  if (!MENT.open) return false;
+  if (e.key === 'ArrowDown') { e.preventDefault(); MENT.idx = (MENT.idx + 1) % MENT.items.length; renderMention(); return true; }
+  if (e.key === 'ArrowUp') { e.preventDefault(); MENT.idx = (MENT.idx - 1 + MENT.items.length) % MENT.items.length; renderMention(); return true; }
+  if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); applyMention(MENT.idx); return true; }
+  if (e.key === 'Escape') { e.preventDefault(); hideMention(); return true; }
+  return false;
+}
+function bindMentions() {
+  const el = document.getElementById('meetInput');
+  const box = document.getElementById('mentionBox');
+  if (!el || !box) return;
+  el.addEventListener('input', () => { MENT.idx = 0; renderMention(); });
+  el.addEventListener('click', () => { MENT.idx = 0; renderMention(); });
+  el.addEventListener('blur', () => setTimeout(hideMention, 180));
+  box.addEventListener('mousedown', e => {
+    const it = e.target.closest('[data-mention]');
+    if (!it) return;
+    e.preventDefault();
+    applyMention(Number(it.dataset.mention));
+  });
+}
+
 /* ---------------- chat parsing ---------------- */
 async function handleChat(text) {
   const t = String(text || '').trim();
@@ -3258,19 +3676,45 @@ async function handleChat(text) {
   }
   // 소집
   if (/모여|소집|집합/.test(t) && t.length < 18) { gatherAll(); return; }
-  // @멘션 1:1
-  const mm = t.match(/^@(\S+)\s*([\s\S]*)$/);
-  if (mm) {
-    const a = S.agents.find(x => x.name === mm[1]) || S.agents.find(x => x.name.includes(mm[1]));
-    if (a) {
-      const body = (mm[2] || '').trim();
-      if (!body) { S.selected = a.id; showAgentCard(a); toast(a.name + ' · ' + intervalLabel(a.interval) + ' 응답'); return; }
-      sendToAgent(a, body, S.activeRoom);
-      return;
-    }
-    toast('해당 이름의 에이전트가 없습니다');
+
+  const call = parseCall(t);
+  const room = S.activeRoom;
+
+  // @전체
+  if (call.all) {
+    if (!call.body) { toast('지시 내용을 입력하세요 (예: @전체 랜딩페이지 기획안 만들어)'); return; }
+    await dispatchAll(call.body, room, t);
     return;
   }
+
+  // @이름 (1명 또는 여러 명)
+  if (call.targets.length) {
+    if (!call.body) {
+      if (call.targets.length === 1) {
+        const a = call.targets[0];
+        S.selected = a.id; showAgentCard(a);
+        toast(a.name + ' · ' + intervalLabel(a.interval) + ' 응답 대기' + (a.lead ? ' · 총괄' : ''));
+      } else {
+        S.callTargets = call.targets.map(a => a.id); renderCallBar();
+        toast(call.targets.map(a => a.name).join(', ') + ' 선택');
+      }
+      return;
+    }
+    await dispatchTo(call.targets, call.body, room, t, { explicit: true });
+    return;
+  }
+
+  // 호출 대상 바에서 고른 에이전트
+  const sel = selectedTargets();
+  if (sel.length) {
+    await dispatchTo(sel, call.body || t, room, t);
+    return;
+  }
+
+  // 등록되지 않은 @이름
+  const mm = t.match(/^@(\S+)/);
+  if (mm && mm[1] !== '전체') { toast('"' + mm[1] + '" 이름의 에이전트가 없습니다'); return; }
+
   runTask(t);
 }
 
@@ -3293,7 +3737,7 @@ async function execCmd(raw) {
   switch (cmd) {
     case 'help':
       termPush('SYS', '사용 가능한 명령', 't-sys');
-      ['status — 오피스·에이전트·대기 상태', 'agents — 에이전트 목록(제공자·응답시간)', 'agents on|off <이름> — 켜기/끄기', 'add [이름] [역할] — 새 에이전트 추가 창', 'invite <이름> [역할] [분] — 바로 등록', 'reply <이름> <내용> — 수동 응답 입력', 'rm <이름> — 에이전트 삭제', 'run <작업내용> — 설정된 응답시간으로 디스패치', 'link [이름] [역할] — 초대 URL 발급', 'hook — 웹훅 엔드포인트', 'view 3d|2d|meet|term — 화면 전환', 'gather — 전원 대회의실 소집', 'clear — 로그 지우기']
+      ['status — 오피스·에이전트·대기 상태', 'agents — 에이전트 목록(제공자·응답시간)', 'agents on|off <이름> — 켜기/끄기', 'add [이름] [역할] — 새 에이전트 추가 창', 'invite <이름> [역할] [분] — 바로 등록', 'lead [이름|off] — 총괄 에이전트 지정/해제', 'call @이름 [@이름2] <지시> — 지정한 에이전트만 호출', 'orchestrate <지시> — 총괄이 팀원에게 하위 지시', 'reply <이름> <내용> — 수동 응답 입력', 'rm <이름> — 에이전트 삭제', 'run <작업내용> — 설정된 응답시간으로 디스패치', 'link [이름] [역할] — 초대 URL 발급', 'hook — 웹훅 엔드포인트', 'view 3d|2d|meet|term — 화면 전환', 'gather — 전원 대회의실 소집', 'clear — 로그 지우기']
         .forEach(t => termPush('HELP', t, 't-sys'));
       return;
     case 'status': {
@@ -3321,7 +3765,7 @@ async function execCmd(raw) {
       }
       S.agents.forEach(a => {
         const j = newestJob(a);
-        termPush('AGENTS', `${a.enabled ? '●' : '○'} ${a.name.padEnd(10, ' ')} ${providerOf(a).name.padEnd(6, ' ')} ${a.role.padEnd(4, ' ')} ${connOf(a).short.padEnd(3, ' ')} 응답 ${intervalLabel(a.interval).padEnd(4, ' ')} ${j ? '대기 ' + jobClock(j) : a.state}`, a.enabled ? 't-ok' : 't-sys');
+        termPush('AGENTS', `${a.enabled ? '●' : '○'} ${((a.lead ? '👑' : '  ') + a.name).padEnd(12, ' ')} ${providerOf(a).name.padEnd(6, ' ')} ${a.role.padEnd(4, ' ')} ${connOf(a).short.padEnd(3, ' ')} 응답 ${intervalLabel(a.interval).padEnd(4, ' ')} ${j ? '대기 ' + jobClock(j) : a.state}`, a.enabled ? 't-ok' : 't-sys');
       });
       if (!S.agents.length) termPush('AGENTS', '(없음) ＋ 에이전트 추가 또는 add 명령으로 등록하세요.', 't-warn');
       return;
@@ -3368,6 +3812,49 @@ async function execCmd(raw) {
     case 'run': {
       if (!arg) { termPush('WARN', 'run <작업내용> 형식으로 입력하세요.', 't-warn'); return; }
       runTask(arg, S.activeRoom);
+      return;
+    }
+    case 'lead': {
+      if (arg === 'off' || arg === 'none' || arg === '해제') {
+        if (!leadAgent()) { termPush('LEAD', '총괄 에이전트 없음', 't-warn'); return; }
+        setLeadAgent(null); return;
+      }
+      if (!arg) {
+        const cur = leadAgent();
+        if (!cur) termPush('LEAD', '총괄 에이전트 없음 · lead <이름> 으로 지정하세요.', 't-warn');
+        else termPush('LEAD', `현재 총괄: 👑 ${cur.name} · ${cur.role} · @${cur.name} 로 지휘 | lead off 로 해제`, 't-ok');
+        return;
+      }
+      const a = S.agents.find(x => x.name === arg.replace(/^@/, '')) || findAgentByName(arg.replace(/^@/, ''));
+      if (!a) { termPush('ERR', '해당 에이전트를 찾지 못했습니다.', 't-err'); return; }
+      setLeadAgent(a);
+      return;
+    }
+    case 'call': case 'invoke': {
+      const toks = arg.split(/\s+/).filter(Boolean);
+      if (!toks.length) { termPush('WARN', 'call @이름 [@이름2] <지시> 형식으로 입력하세요.', 't-warn'); return; }
+      const targets = [];
+      let i = 0;
+      for (; i < toks.length; i++) {
+        const a = findAgentByName(toks[i].replace(/^@/, ''));
+        if (!a) break;
+        if (!targets.includes(a)) targets.push(a);
+      }
+      const body = toks.slice(i).join(' ');
+      if (!targets.length) { termPush('ERR', `'${toks[0]}' 이름의 에이전트가 없습니다.`, 't-err'); return; }
+      if (!body) {
+        targets.forEach(a => termPush('CALL', `@${a.name} · ${a.role} · ${connOf(a).name} · 응답 ${intervalLabel(a.interval)}${a.lead ? ' · 👑총괄' : ''}`, 't-ok'));
+        return;
+      }
+      termPush('CALL', `${targets.map(a => '@' + a.name).join(', ')} 에게 지시`, 't-exec');
+      dispatchTo(targets, body, S.activeRoom, body);
+      return;
+    }
+    case 'orchestrate': case 'wave': {
+      const ld = leadAgent();
+      if (!ld) { termPush('WARN', '총괄 에이전트가 없습니다. lead <이름> 으로 먼저 지정하세요.', 't-warn'); return; }
+      if (!arg) { termPush('WARN', `orchestrate <지시> — @${ld.name}(총괄)가 팀원에게 하위 지시를 냅니다.`, 't-warn'); return; }
+      orchestrate(ld, arg, S.activeRoom);
       return;
     }
     case 'link': {
@@ -3468,18 +3955,18 @@ function renderBots() {
     const pv = providerOf(a);
     const j = newestJob(a);
     return `
-    <div class="bot ${a.enabled ? '' : 'off'}" data-agent="${a.id}">
+    <div class="bot ${a.enabled ? '' : 'off'} ${a.lead ? 'lead' : ''}" data-agent="${a.id}">
       ${avatarHTML(a)}
       <div class="info">
-        <div class="nm">${esc(a.name)} <span class="tag ${a.tag === '비서' ? 'sec' : ''}" style="border-color:${rgba(pv.color, .5)};color:${shade(pv.color, .35)}">${esc(pv.name)}</span></div>
-        <div class="rl" title="${esc(connOf(a).name)} · ${esc(connOf(a).desc)}">${esc(a.role)} · ⏱ ${esc(intervalLabel(a.interval))}${j ? ' · <b style="color:#f0c469">' + jobClock(j) + '</b>' : ''}</div>
+        <div class="nm">${esc(a.name)}${a.lead ? ' <span class="cwbadge on" data-lead="' + a.id + '" title="총괄 해제">👑</span>' : ' <span class="cwbadge" data-lead="' + a.id + '" title="총괄 에이전트로 지정">👑</span>'} <span class="tag ${a.tag === '비서' ? 'sec' : ''}" style="border-color:${rgba(pv.color, .5)};color:${shade(pv.color, .35)}">${esc(pv.name)}</span></div>
+        <div class="rl" title="${esc(connOf(a).name)} · ${esc(connOf(a).desc)}">${a.lead ? '<b style="color:#f0c469">총괄</b> · ' : ''}${esc(a.role)} · ⏱ ${esc(intervalLabel(a.interval))}${j ? ' · <b style="color:#f0c469">⚡ ' + jobClock(j) + '</b>' : ''}</div>
       </div>
       <button class="mini" data-edit="${a.id}" title="편집">✎</button>
       <button class="mini" data-del="${a.id}" title="삭제">🗑</button>
       <div class="sw ${a.enabled ? 'on' : ''}" data-toggle="${a.id}" role="switch" aria-checked="${a.enabled}"></div>
     </div>`;
   }).join('') || `<div class="empty-list"><b>에이전트가 없습니다</b><span>아래 버튼으로 클로드 · GPT · 제미나이 · 피클 · 부이 · 인스팅스를 추가하세요.</span><button class="btn primary sm" data-add-agent>＋ 에이전트 추가</button></div>`;
-  renderStrip();
+  renderStrip(); renderCallBar();
 }
 function renderMsgs() {
   const box = document.getElementById('msgs'); if (!box) return;
@@ -3497,7 +3984,7 @@ function renderMsgs() {
       <div class="av" style="background:linear-gradient(160deg,${shade(color, .25)},${color});color:#241a10">${esc(m.icon || '🤖')}</div>
       <div class="body">
         <div class="who"><b style="color:${shade(color, .25)}">${esc(m.name)}</b><span>${hhmm(d)}</span>${m.role ? `<span class="tag">${esc(m.role)}</span>` : ''}${pv ? `<span class="tag" style="color:${shade(pv.color, .35)}">${esc(pv.name)}</span>` : ''}</div>
-        <div class="bubble">${esc(m.text)}</div>
+        <div class="bubble">${fmtText(m.text)}</div>
       </div></div>`;
   });
   if (!list.length) html = `<div class="msg sys"><div class="bubble">아직 대화가 없습니다. 우측 상단 <b>＋ 에이전트 추가</b>로 내 AI를 등록한 뒤 지시를 입력하세요.</div></div>`;
@@ -3545,7 +4032,7 @@ const VIEWS = { v3d: 'v3d', v2d: 'v2d', meet: 'meet', term: 'term' };
 const VIEW_HINT = {
   v3d: '드래그로 회전 · 휠로 줌 · 봇을 클릭하면 편집/삭제 · 우측 상단 ＋ 에이전트 추가',
   v2d: '고화질 도트 오피스(48px/m) · 에이전트는 설정한 응답 시간으로 대기합니다',
-  meet: '좌측 에이전트 편집/삭제 · 중앙 방별 대화 · 응답 시간 배지 확인',
+  meet: '좌측 에이전트 편집/삭제 · 중앙 방별 대화 · @이름·@전체 호출 · 👑총괄에게 지시',
   term: 'help · agents · add · invite · reply · run · link',
 };
 function setView(v) {
@@ -3566,7 +4053,7 @@ function setView(v) {
 function openModal(id) { const m = document.getElementById(id); if (m) m.classList.add('on'); }
 function closeModals() { $$('.modal').forEach(m => m.classList.remove('on')); }
 
-const AG = { editingId: null, provider: 'claude', conn: 'manual', interval: 5, role: '개발', color: PROVIDERS.claude.color, confirmDel: false };
+const AG = { editingId: null, provider: 'claude', conn: 'manual', interval: 5, role: '개발', color: PROVIDERS.claude.color, confirmDel: false, lead: false };
 
 function agentModalHTML() {
   // 프리셋
@@ -3590,6 +4077,10 @@ function agentModalHTML() {
   document.getElementById('agColors').innerHTML = PALETTE.concat([PROVIDERS.claude.color, PROVIDERS.gpt.color, PROVIDERS.gemini.color, PROVIDERS.pickle.color, PROVIDERS.vooy.color, PROVIDERS.instings.color])
     .filter((c, i, arr) => arr.indexOf(c) === i)
     .map(c => `<button data-color="${c}" class="${AG.color === c ? 'sel' : ''}" style="background:linear-gradient(160deg,${shade(c, .2)},${c})"></button>`).join('');
+  // 총괄 토글
+  const lt = document.getElementById('agLead'), ls = document.getElementById('agLeadState');
+  if (lt) { lt.classList.toggle('on', !!AG.lead); lt.setAttribute('aria-checked', AG.lead ? 'true' : 'false'); }
+  if (ls) ls.textContent = AG.lead ? '지정됨 👑' : '꺼짐';
   // 조건부 필드
   document.getElementById('agEndpointWrap').classList.toggle('hidden', AG.conn !== 'webhook');
   document.getElementById('agKeyWrap').classList.toggle('hidden', AG.conn !== 'api');
@@ -3612,6 +4103,7 @@ function openAgentModal(agent, prefill) {
   AG.interval = agent ? agent.interval : 5;
   AG.role = agent ? agent.role : (prefill && prefill.role ? prefill.role : pv.role);
   AG.color = agent ? agent.color : pv.color;
+  AG.lead = agent ? !!agent.lead : false;
   document.getElementById('agTitle').textContent = agent ? '에이전트 편집' : '에이전트 추가';
   document.getElementById('agName').value = agent ? agent.name : ((prefill && prefill.name) || '');
   document.getElementById('agRoleDesc').value = agent ? (agent.desc || '') : '';
@@ -3645,19 +4137,23 @@ function saveAgentForm() {
     existing.provider = pv.id; existing.icon = pv.icon; existing.color = AG.color;
     existing.conn = AG.conn; existing.endpoint = endpoint; existing.apiKey = apiKey;
     existing.interval = Number(AG.interval); existing.model = pv.model;
+    if (AG.lead) S.agents.forEach(x => { x.lead = x.id === existing.id; });
+    else existing.lead = false;
     if (existing.seat && existing.seat.kind !== room) goToRoom(existing, room);
     else if (!existing.seat) goToRoom(existing, room);
-    termPush('OK', `${name} 수정 · ${pv.name} · ${connOf(existing).name} · 응답 ${intervalLabel(existing.interval)}`, 't-ok');
+    termPush('OK', `${name} 수정 · ${pv.name} · ${connOf(existing).name} · 응답 ${intervalLabel(existing.interval)}${existing.lead ? ' · 총괄' : ''}`, 't-ok');
+    if (existing.lead) addMessage(S.activeRoom, 'sys', { text: `👑 ${name} 이(가) 총괄 에이전트로 지정되었습니다. @${name} 로 지시하면 팀원에게 하위 지시를 냅니다.` });
   } else {
     const a = addAgent({
       name, role, color: AG.color, provider: pv.id, icon: pv.icon, desc,
-      conn: AG.conn, endpoint, apiKey, interval: Number(AG.interval), tag: role === '총괄' ? '비서' : '봇', seat: room,
+      conn: AG.conn, endpoint, apiKey, interval: Number(AG.interval), tag: role === '총괄' ? '비서' : '봇', seat: room, lead: AG.lead,
     }, { x: 8.0, y: 10.25, seatKind: room });
+    if (a.lead) S.agents.forEach(x => { x.lead = x.id === a.id; });
     if (a.seat && a.seat.kind === 'work') a.homeSeat = a.seat;
     if (!a.seat) { a.state = 'idle'; a.path = []; }
     S.selected = a.id;
     say(a, `${name} 입장했습니다!`, 4);
-    addMessage('meeting', 'sys', { text: `${name}(${pv.name} · ${role}) 님이 합류했습니다 · 응답 ${intervalLabel(a.interval)} · ${connOf(a).name}` });
+    addMessage('meeting', 'sys', { text: `${name}(${pv.name} · ${role}) 님이 합류했습니다 · 응답 ${intervalLabel(a.interval)} · ${connOf(a).name}${a.lead ? ' · 👑 총괄' : ''}` });
     termPush('ADD', `${name} · ${pv.name} · ${connOf(a).conn ? connOf(a).name : ''} · 응답 ${intervalLabel(a.interval)}`, 't-ok');
     toast(`${name} 님이 합류했습니다`);
   }
@@ -3680,6 +4176,11 @@ function buildAgentModal() {
   document.getElementById('agRoles').onclick = e => {
     const b = e.target.closest('[data-role]'); if (!b) return;
     AG.role = b.dataset.role; agentModalHTML();
+  };
+  document.getElementById('agLead').onclick = () => {
+    AG.lead = !AG.lead;
+    agentModalHTML();
+    if (AG.lead) toast('저장하면 이 에이전트가 총괄이 됩니다 · 다른 총괄은 자동 해제');
   };
   document.getElementById('agConns').onclick = e => {
     const b = e.target.closest('[data-conn]'); if (!b) return;
@@ -3831,19 +4332,21 @@ function showAgentCard(a) {
   el.dataset.pendingClock = j ? '1' : '0';
   el.innerHTML = `<div class="who">
       <div class="av" style="background:linear-gradient(160deg,${shade(a.color, .25)},${a.color});color:#241a10">${esc(pv.icon)}</div>
-      <div><div class="nm">${esc(a.name)}</div><div class="rl">${esc(pv.name)} · ${esc(a.role)}</div></div>
+      <div><div class="nm">${esc(a.name)}${a.lead ? ' 👑' : ''}</div><div class="rl">${esc(pv.name)} · ${esc(a.role)}</div></div>
     </div>
     <div class="chips2">
+      ${a.lead ? '<span class="tag sec" style="border:1px solid rgba(246,214,168,.4);color:#f6d6a8">👑 총괄</span>' : ''}
       <span class="tag" style="color:${shade(pv.color, .3)};border-color:${rgba(pv.color, .45)}">⏱ 응답 ${esc(intervalLabel(a.interval))}</span>
       <span class="tag">${esc(connOf(a).name)}</span>
     </div>
-    <div class="st"><span class="dot" style="background:${a.enabled ? '#79d3a2' : '#8b8074'}"></span> ${room} · ${st}${j ? ` · <b data-clock style="color:#f0c469">${jobClock(j)}</b>` : ''}</div>
+    <div class="st"><span class="dot" style="background:${a.enabled ? '#79d3a2' : '#8b8074'}"></span> ${room} · ${st}${j ? ` · <b data-clock style="color:#f0c469">⚡ ${jobClock(j)}</b>` : ''}</div>
     <div class="acts">
       <button class="btn sm" data-go="meeting" data-id="${a.id}">대회의실</button>
       <button class="btn sm" data-go="work" data-id="${a.id}">자리</button>
       <button class="btn sm" data-go="lounge" data-id="${a.id}">라운지</button>
     </div>
     <div class="acts">
+      <button class="btn sm" data-lead="${a.id}">${a.lead ? '👑 총괄 해제' : '👑 총괄 지정'}</button>
       <button class="btn sm" data-edit="${a.id}">✎ 편집</button>
       <button class="btn sm" data-del="${a.id}">🗑 삭제</button>
     </div>`;
@@ -3889,8 +4392,8 @@ function boot() {
   load();                       // 저장된 에이전트만 복원 · 없으면 0명 그대로 시작
   S.agents.forEach(a => { if (a.seat && a.seat.kind === 'work') a.homeSeat = a.seat; });
 
-  termPush('SYS', 'AI OFFICE v3.0 · 3D / 2D PIXEL(48PPM) · 에이전트 직접 등록', 't-sys');
-  termPush('SYS', `agents=${S.agents.length} · 응답시간 1·5·10·20·30·60분 · 웹훅/API/수동 연결`, 't-sys');
+  termPush('SYS', 'AI OFFICE v4.0 · 3D / 2D PIXEL(48PPM) · @이름/@전체 호출 · 👑총괄 지휘', 't-sys');
+  termPush('SYS', `agents=${S.agents.length} · 응답시간 30초~60분 · 웹훅/API/시뮬/수동 연결`, 't-sys');
   if (!S.agents.length) termPush('WARN', '등록된 에이전트가 없습니다. ＋ 에이전트 추가 로 클로드·GPT·제미나이 등을 직접 등록하세요.', 't-warn');
 
   renderAll();
@@ -3932,6 +4435,12 @@ function boot() {
 
   // 봇 목록: 토글 / 편집 / 삭제
   document.getElementById('botList').onclick = e => {
+    const ld = e.target.closest('[data-lead]');
+    if (ld) {
+      const a = S.agents.find(x => x.id === ld.dataset.lead);
+      if (a) setLeadAgent(a.lead ? null : a);
+      e.stopPropagation(); return;
+    }
     const ed = e.target.closest('[data-edit]');
     if (ed) { const a = S.agents.find(x => x.id === ed.dataset.edit); openAgentModal(a || null); e.stopPropagation(); return; }
     const dl = e.target.closest('[data-del]');
@@ -3952,8 +4461,15 @@ function boot() {
   };
   const plus = document.getElementById('btnPlus'); if (plus) plus.onclick = () => openAgentModal(null);
   document.getElementById('btnSend').onclick = sendChat;
+  const callBarEl = document.getElementById('callBar');
+  if (callBarEl) callBarEl.onclick = e => {
+    if (e.target.closest('[data-call-all]')) { selectAllTargets(); return; }
+    const c = e.target.closest('[data-call]');
+    if (c) toggleTarget(c.dataset.call);
+  };
+  bindMentions();
   const mi = document.getElementById('meetInput');
-  mi.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+  mi.addEventListener('keydown', e => { if (mentionKey(e)) return; if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
   mi.addEventListener('input', () => { mi.style.height = 'auto'; mi.style.height = Math.min(120, mi.scrollHeight) + 'px'; });
   const bn = document.getElementById('btnNote'); if (bn) bn.onclick = () => { addNote(''); renderNotes(); const list = document.getElementById('noteList'); const el = list.lastElementChild; if (el) el.focus(); };
   document.getElementById('noteList').addEventListener('blur', e => {
@@ -3970,6 +4486,7 @@ function boot() {
     openModal('mFile');
   };
   document.getElementById('card3d').addEventListener('click', e => {
+    const ld = e.target.closest('[data-lead]'); if (ld) { const a = S.agents.find(x => x.id === ld.dataset.lead); if (a) setLeadAgent(a.lead ? null : a); return; }
     const ed = e.target.closest('[data-edit]'); if (ed) { const a = S.agents.find(x => x.id === ed.dataset.edit); openAgentModal(a || null); return; }
     const dl = e.target.closest('[data-del]'); if (dl) { const a = S.agents.find(x => x.id === dl.dataset.del); if (a) { deleteAgent(a); renderAll(); toast(a.name + ' 삭제'); } return; }
     const b = e.target.closest('[data-go]'); if (!b) return;
@@ -4025,12 +4542,13 @@ function boot() {
   requestAnimationFrame(frame);
 
   emit('messages'); renderMsgs();
-  if (!viaURL) addMessage('meeting', 'sys', { text: 'AI 오피스를 시작합니다. 우측 상단 ＋ 에이전트 추가 로 클로드 · GPT · 제미나이 · 피클 · 부이 · 인스팅스를 직접 등록하세요.' });
+  if (!viaURL) addMessage('meeting', 'sys', { text: 'AI 오피스를 시작합니다. ＋ 에이전트 추가 로 AI를 등록한 뒤, 입력창 위 호출 대상에서 @이름 또는 @전체를 골라 지시하세요. 👑 총괄에게 지시하면 팀원에게 하위 지시를 냅니다.' });
 }
 function sendChat() {
   const el = document.getElementById('meetInput');
   const v = el.value.trim(); if (!v) return;
   el.value = ''; el.style.height = '38px';
+  hideMention();
   handleChat(v);
 }
 document.addEventListener('DOMContentLoaded', boot);
