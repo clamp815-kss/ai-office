@@ -818,8 +818,9 @@ main{flex:1 1 0;display:flex;min-height:0;overflow:hidden}
     </div>
 
     <div class="field hidden" id="agEndpointWrap"><label>웹훅 · 엔드포인트 URL</label>
-      <input type="url" id="agEndpoint" placeholder="https://example.com/hook">
-      <div class="hintline">POST 본문: <code>{agent, provider, role, room, message}</code> · 응답 JSON의 <code>reply</code>/<code>text</code>/<code>message</code>를 그대로 표시합니다.</div>
+      <input type="url" id="agEndpoint" placeholder="https://ai-office-webhook.clamp815.workers.dev/">
+      <div class="pick" id="agMethods" style="margin-top:8px"></div>
+      <div class="hintline">POST: 본문 <code>{agent, provider, role, room, message}</code> · GET: 주소에 <code>?agent=…&amp;provider=…&amp;role=…&amp;room=…&amp;message=…</code> · 응답 JSON의 <code>reply</code>/<code>text</code>/<code>message</code>를 그대로 표시합니다.</div>
     </div>
 
     <div class="field hidden" id="agKeyWrap"><label>API 키</label>
@@ -844,6 +845,17 @@ main{flex:1 1 0;display:flex;min-height:0;overflow:hidden}
     <button class="x" data-close>✕</button>
     <h2>🔗 오피스 초대 주소</h2>
     <p class="sub">이 주소를 열면 <b>설정 그대로</b> 에이전트가 입구로 걸어 들어옵니다. 외부 AI·웹훅·API 에이전트도 아래 주소로 연결할 수 있습니다.</p>
+
+    <div class="field" style="border:1px solid rgba(195,155,255,.45);border-radius:14px;padding:14px;background:rgba(195,155,255,.06)">
+      <label style="color:#e6d6ff">👥 피클 · 부이 · 인스팅스 대화방 일괄 초대</label>
+      <div class="codebox" id="lkBulk">—</div>
+      <div class="actions" style="margin-top:9px">
+        <button class="btn primary" id="lkBulkGo">▶ 지금 일괄 초대</button>
+        <button class="btn" id="lkBulkCopy">📋 주소 복사</button>
+        <button class="btn" id="lkBulkHook">🔗 웹훅 GET 예시</button>
+      </div>
+      <div class="hintline">주소창에 붙여 열면 세 에이전트가 <b>한 번에 대회의실(대화방)</b>로 들어오고 연결이 <b>웹훅(GET)</b> + <code>ai-office-webhook</code> 으로 맞춰집니다. 열린 뒤 주소의 쿼리는 자동으로 정리되어 F5 로 새로고침해도 중복 실행되지 않습니다.</div>
+    </div>
 
     <div class="row2">
       <div class="field"><label>에이전트 이름</label><input type="text" id="lkName" value="클로드" maxlength="14"></div>
@@ -995,6 +1007,11 @@ function intervalLabel(m) {
   return v < 1 ? Math.round(v * 60) + '초' : (Math.round(v * 10) / 10) + '분';
 }
 function connOf(a) { return CONNS[a && a.conn] || CONNS.manual; }
+function connLabel(a) {
+  const c = connOf(a);
+  if (c.id === 'webhook') return '웹훅(' + ((a && a.method === 'get') ? 'GET' : 'POST') + ')';
+  return c.name;
+}
 
 /* ---------------- world layout (metres) ---------------- */
 const W = { w: 16, d: 11, h: 2.8 };
@@ -1171,7 +1188,7 @@ function addAgent(def, opts = {}) {
     color: def.color || pv.color || roleMeta.color, icon: def.icon || pv.icon || roleMeta.icon,
     desc: def.desc || pv.desc || roleMeta.desc, enabled: true, model: def.model || pv.model || 'custom',
     provider: pv.id, conn: CONNS[def.conn] ? def.conn : 'manual',
-    endpoint: def.endpoint || '', apiKey: def.apiKey || '',
+    endpoint: def.endpoint || '', method: def.method === 'get' ? 'get' : 'post', apiKey: def.apiKey || '',
     interval: INTERVALS.includes(Number(def.interval)) ? Number(def.interval) : 5,
     x: opts.x ?? 8.0, y: opts.y ?? 10.15, facing: -Math.PI / 2, path: [], walk: 0,
     state: 'moving', seat: null, room: 'work', bubble: null, typing: 0, anim: Math.random() * 9,
@@ -1341,7 +1358,7 @@ function save() {
       agents: S.agents.map(a => ({
         name: a.name, role: a.role, tag: a.tag, color: a.color, icon: a.icon, desc: a.desc, enabled: a.enabled,
         seat: a.seat ? a.seat.id : null, room: a.seat ? a.seat.kind : (a.homeRoom || 'work'),
-        model: a.model, src: a.src, provider: a.provider, conn: a.conn, endpoint: a.endpoint,
+        model: a.model, src: a.src, provider: a.provider, conn: a.conn, endpoint: a.endpoint, method: a.method || 'post',
         apiKey: a.apiKey, interval: a.interval, homeRoom: a.homeRoom, lead: !!a.lead,
       })),
       messages: S.messages.slice(-60), notes: S.notes, files: S.files.slice(0, 20), stats: S.stats,
@@ -1361,7 +1378,7 @@ function load() {
         desc: x.desc, enabled: x.enabled !== false, model: x.model || pv.model || 'custom', x: 8, y: 10.1,
         facing: -Math.PI / 2, path: [], walk: 0, state: 'idle', seat: null, room: x.room || 'work',
         bubble: null, typing: 0, anim: 0, src: x.src || 'user', since: Date.now() - 1e6,
-        provider: pv.id, conn: CONNS[x.conn] ? x.conn : 'manual', endpoint: x.endpoint || '',
+        provider: pv.id, conn: CONNS[x.conn] ? x.conn : 'manual', endpoint: x.endpoint || '', method: x.method === 'get' ? 'get' : 'post',
         apiKey: x.apiKey || '', interval: INTERVALS.includes(Number(x.interval)) ? Number(x.interval) : 5,
         homeRoom: x.homeRoom || x.room || 'work', lead: !!x.lead,
       };
@@ -3182,7 +3199,7 @@ const API_CALL = {
 async function callAgent(a, job) {
   if (a.conn === 'webhook') {
     if (!a.endpoint) { failJob(job, '엔드포인트 URL이 없습니다. 에이전트 편집에서 입력하세요.'); return; }
-    termPush('POST', `${a.endpoint.slice(0, 70)} · agent=${a.name}`, 't-hook');
+    const useGet = (a.method || 'post') === 'get';
     try {
       const payload = {
         agent: a.name, provider: a.provider, role: a.role, room: job.room,
@@ -3194,10 +3211,29 @@ async function callAgent(a, job) {
         payload.teammates = (job.orchestrate.pool || []).filter(x => x.id !== a.id).map(x => ({ name: x.name, role: x.role, desc: x.desc || '' }));
         payload.format = '하위 지시는 "@이름 → 내용" 형식으로 한 줄씩';
       }
-      const res = await fetch(a.endpoint, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      let res;
+      if (useGet) {
+        let u;
+        try { u = new URL(a.endpoint, baseURL()); } catch (e) { failJob(job, '웹훅 주소 형식이 올바르지 않습니다: ' + a.endpoint); return; }
+        u.searchParams.set('agent', payload.agent);
+        u.searchParams.set('provider', payload.provider);
+        u.searchParams.set('role', payload.role);
+        u.searchParams.set('room', payload.room);
+        u.searchParams.set('message', payload.message);
+        if (job.orchestrate) {
+          u.searchParams.set('instruction', job.text);
+          u.searchParams.set('orchestration', '1');
+          u.searchParams.set('teammates', payload.teammates.map(t => t.name).join(','));
+        }
+        termPush('GET', `${a.endpoint.replace(/^https?:\/\//, '').slice(0, 60)} · agent=${a.name} · ${u.search.length}자 쿼리`, 't-hook');
+        res = await fetch(u.toString(), { method: 'GET', headers: { 'Accept': 'application/json' } });
+      } else {
+        termPush('POST', `${a.endpoint.slice(0, 70)} · agent=${a.name}`, 't-hook');
+        res = await fetch(a.endpoint, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
       const raw = await res.text();
       let out = raw;
       try { const j = JSON.parse(raw); out = j.reply || j.text || j.message || j.output || j.answer || raw; } catch (e) { }
@@ -3247,7 +3283,7 @@ function sendToAgent(a, text, room, opts) {
   S.jobs.push(job);
   if (S.jobs.length > 80) S.jobs.splice(0, S.jobs.length - 80);
   if (addUser) addMessage(job.room, 'user', { name: '현우', text: o.displayText || job.text, color: '#f6d6a8', icon: '🧑‍💼' });
-  termPush(job.orchestrate ? 'LEAD-JOB' : 'DISPATCH', `${depth ? '↳ ' : ''}@${a.name}${job.orchestrate ? ' 👑 지휘' : ''} → ${providerOf(a).name} · ${connOf(a).conn ? connOf(a).name : connOf(a).name} · 응답한도 ${intervalLabel(a.interval)}`, 't-exec');
+  termPush(job.orchestrate ? 'LEAD-JOB' : 'DISPATCH', `${depth ? '↳ ' : ''}@${a.name}${job.orchestrate ? ' 👑 지휘' : ''} → ${providerOf(a).name} · ${connLabel(a)} · 응답한도 ${intervalLabel(a.interval)}`, 't-exec');
   setRunState(true);
   renderPending(); renderMsgs();
   if (a.conn === 'sim') {
@@ -3550,6 +3586,106 @@ function hookURL(o) {
   u.searchParams.set('msg', o.msg || '보고: 작업 완료했습니다.');
   return u.toString();
 }
+
+/* ---------------- GET 다중 에이전트 일괄 초대 ---------------- */
+const DEFAULT_HOOK = 'https://ai-office-webhook.clamp815.workers.dev/';
+const TEAM_PRESETS = [
+  { provider: 'pickle',   name: '피클',     role: '총괄',   aliases: ['pickle', '피클', 'uriel', '우리엘', '피클(우리엘)'] },
+  { provider: 'vooy',     name: '부이',     role: '마케팅', aliases: ['vooy', '부이', '부이(vooy)'] },
+  { provider: 'instings', name: '인스팅스', role: '개발',   aliases: ['instings', '인스팅스', '인스팅스(instings)'] },
+  { provider: 'claude',   name: '클로드',   role: '개발',   aliases: ['claude', '클로드'] },
+  { provider: 'gpt',      name: 'GPT',      role: '기획',   aliases: ['gpt', '지피티', 'chatgpt'] },
+  { provider: 'gemini',   name: '제미나이', role: '리서치', aliases: ['gemini', '제미나이'] },
+];
+function teamKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[\s_·\-()[\]{}]/g, ''); }
+const TEAM_MAP = (() => { const m = {}; TEAM_PRESETS.forEach(t => t.aliases.forEach(a => { m[teamKey(a)] = t; })); return m; })();
+function teamSpec(tok) {
+  const raw = String(tok == null ? '' : tok).trim();
+  if (!raw) return null;
+  const hit = TEAM_MAP[teamKey(raw)];
+  if (hit) return { provider: hit.provider, name: hit.name, role: hit.role };
+  return { provider: '', name: raw.replace(/^@/, ''), role: '' };
+}
+const ROOM_ALIAS = {
+  meeting: 'meeting', meet: 'meeting', '회의실': 'meeting', '대회의실': 'meeting', '대화방': 'meeting',
+  command: 'command', '지휘실': 'command', lounge: 'lounge', '라운지': 'lounge',
+  work: 'work', '업무석': 'work', '워크스테이션': 'work', '자리': 'work',
+};
+function normRoomId(r, fallback) {
+  const k = String(r == null ? '' : r).trim().toLowerCase();
+  return ROOM_ALIAS[k] || ROOM_ALIAS[String(r == null ? '' : r).trim()] || fallback || 'meeting';
+}
+function normMethod(m) { return String(m == null ? '' : m).trim().toLowerCase() === 'get' ? 'get' : 'post'; }
+function sameAgent(a, spec) {
+  if (!a || !spec) return false;
+  if (spec.provider && spec.provider !== 'custom' && a.provider === spec.provider) return true;
+  const k = teamKey(a.name);
+  return !!k && (k === teamKey(spec.name) || k === teamKey(spec.provider));
+}
+function inviteMany(tokens, opts) {
+  const o = opts || {};
+  const specs = (tokens || []).map(teamSpec).filter(Boolean);
+  if (!specs.length) return [];
+  const room = normRoomId(o.room, 'meeting');
+  const conn = CONNS[o.conn] ? o.conn : (o.endpoint ? 'webhook' : '');
+  const endpoint = String(o.endpoint || (conn === 'webhook' ? DEFAULT_HOOK : '')).trim();
+  const method = normMethod(o.method);
+  const iv = Number(o.interval);
+  const interval = INTERVALS.includes(iv) ? iv : (o.bulk ? 0.5 : null);
+  const leadSpec = o.lead ? teamSpec(o.lead) : null;
+  const out = [];
+  specs.forEach(spec => {
+    const pv = PROVIDERS[spec.provider] || PROVIDERS.custom;
+    const role = normRole(o.role || spec.role || pv.role);
+    let a = S.agents.find(x => sameAgent(x, spec));
+    const isNew = !a;
+    if (a) {
+      a.enabled = true;
+      if (conn) a.conn = conn;
+      if (endpoint) a.endpoint = endpoint;
+      if (o.method) a.method = method;
+      else if (!a.method) a.method = 'post';
+      if (interval) a.interval = interval;
+      if (!a.role || a.role === '커스텀') a.role = role;
+      if (!(a.seat && a.seat.kind === room)) goToRoom(a, room);
+    } else {
+      a = addAgent({
+        name: spec.name, role, color: pv.color, tag: role === '총괄' ? '비서' : '봇', provider: pv.id,
+        conn: conn || 'manual', endpoint, method, interval: interval || 5,
+        desc: pv.desc, icon: pv.icon, src: 'invite', seat: room,
+      }, { x: 8.0, y: 10.25, seatKind: room });
+      if (a.seat && a.seat.kind === 'work') a.homeSeat = a.seat;
+      if (!a.seat) { a.state = 'idle'; a.path = []; }
+    }
+    S.selected = a.id;
+    say(a, isNew ? a.name + ' 합류!' : a.name + ' 대화방 복귀', 6);
+    addMessage(room, 'sys', { text: `👥 ${a.name}(${providerOf(a).name} · ${a.role}) 님이 ${ROOMNAME[room]}에 ${isNew ? '합류' : '이동'}했습니다.` });
+    termPush('INVITE', `${isNew ? 'joined' : 'moved'} · ${a.name} · ${providerOf(a).name} · ${connLabel(a)}${endpoint ? ' · ' + shortText(endpoint.replace(/^https?:\/\//, ''), 38) : ''} · 응답 ${intervalLabel(a.interval)} · room=${room}`, 't-ok');
+    out.push(a);
+  });
+  let leadPick = null;
+  if (leadSpec) leadPick = out.find(a => sameAgent(a, leadSpec)) || (out.length === 1 ? out[0] : null);
+  if (leadPick) {
+    S.agents.forEach(x => { x.lead = x.id === leadPick.id; });
+    addMessage(room, 'sys', { text: `👑 ${leadPick.name} 을(를) 총괄 에이전트로 지정했습니다. @${leadPick.name} 로 지시하면 팀원에게 하위 지시를 냅니다.` });
+  }
+  if (out.length > 1) {
+    addMessage(room, 'sys', { text: `${out.map(a => a.name + (a.lead ? '👑' : '')).join(' · ')} — ${out.length}명이 ${ROOMNAME[room]}에 모였습니다. 이 방에 지시하면 각자 설정된 웹훅으로 응답합니다.` });
+  }
+  S.activeRoom = room;
+  save(); renderAll();
+  return out;
+}
+function bulkInviteURL() {
+  const u = new URL(baseURL());
+  u.searchParams.set('invite', 'pickle,vooy,instings');
+  u.searchParams.set('room', 'meeting');
+  u.searchParams.set('conn', 'webhook');
+  u.searchParams.set('endpoint', DEFAULT_HOOK);
+  u.searchParams.set('method', 'get');
+  u.searchParams.set('lead', 'pickle');
+  return u.toString();
+}
 function spawnInvited(cfg) {
   const name = String(cfg.name || '').trim() || '게스트';
   const role = normRole(cfg.role);
@@ -3557,15 +3693,19 @@ function spawnInvited(cfg) {
   const color = cfg.color ? '#' + String(cfg.color).replace('#', '') : pv.color;
   const room = ['work', 'meeting', 'lounge', 'command'].includes(cfg.room) ? cfg.room : 'work';
   const interval = INTERVALS.includes(Number(cfg.interval)) ? Number(cfg.interval) : 5;
+  const method = cfg.method ? normMethod(cfg.method) : '';
   let a = S.agents.find(x => x.name === name);
   const isNew = !a;
   if (a) {
     a.enabled = true;
+    if (CONNS[cfg.conn]) a.conn = cfg.conn;
+    if (cfg.endpoint) a.endpoint = String(cfg.endpoint).trim();
+    if (method) a.method = method;
     goToRoom(a, room);
   } else {
     a = addAgent({
       name, role, color, tag: role === '총괄' ? '비서' : '봇', provider: pv.id,
-      conn: cfg.conn || 'manual', interval, endpoint: cfg.endpoint || '',
+      conn: cfg.conn || 'manual', interval, endpoint: cfg.endpoint || '', method: method || 'post',
       desc: cfg.desc || pv.desc, icon: pv.icon, src: 'invite', seat: room,
     }, { x: 8.0, y: 10.25, seatKind: room });
     if (a.seat && a.seat.kind === 'work') a.homeSeat = a.seat;
@@ -3662,14 +3802,19 @@ function bindMentions() {
 async function handleChat(text) {
   const t = String(text || '').trim();
   if (!t) return;
-  // 초대 URL 붙여넣기
-  if (/invite=1/.test(t)) {
+  // 초대 URL 붙여넣기 (단독 · 일괄 모두)
+  if (/[?&](invite|agents)=/.test(t) && /^https?:/.test(t)) {
     try {
-      const u = new URL(t.startsWith('http') ? t : 'https://x/' + t.replace(/^\/?/, ''));
+      const u = new URL(t);
+      if (parseTeamTokens(u.searchParams).length) {
+        inviteFromURL(u.searchParams);
+        return;
+      }
       spawnInvited({
         name: u.searchParams.get('name') || '', role: u.searchParams.get('role') || '커스텀',
         room: u.searchParams.get('room') || 'work', color: u.searchParams.get('color') || '',
         provider: u.searchParams.get('provider') || '', interval: u.searchParams.get('interval') || '', conn: u.searchParams.get('conn') || '',
+        endpoint: u.searchParams.get('endpoint') || '', method: u.searchParams.get('method') || '',
       });
       return;
     } catch (e) { toast('초대 주소를 읽지 못했습니다'); }
@@ -3737,7 +3882,7 @@ async function execCmd(raw) {
   switch (cmd) {
     case 'help':
       termPush('SYS', '사용 가능한 명령', 't-sys');
-      ['status — 오피스·에이전트·대기 상태', 'agents — 에이전트 목록(제공자·응답시간)', 'agents on|off <이름> — 켜기/끄기', 'add [이름] [역할] — 새 에이전트 추가 창', 'invite <이름> [역할] [분] — 바로 등록', 'lead [이름|off] — 총괄 에이전트 지정/해제', 'call @이름 [@이름2] <지시> — 지정한 에이전트만 호출', 'orchestrate <지시> — 총괄이 팀원에게 하위 지시', 'reply <이름> <내용> — 수동 응답 입력', 'rm <이름> — 에이전트 삭제', 'run <작업내용> — 설정된 응답시간으로 디스패치', 'link [이름] [역할] — 초대 URL 발급', 'hook — 웹훅 엔드포인트', 'view 3d|2d|meet|term — 화면 전환', 'gather — 전원 대회의실 소집', 'clear — 로그 지우기']
+      ['status — 오피스·에이전트·대기 상태', 'agents — 에이전트 목록(제공자·응답시간)', 'agents on|off <이름> — 켜기/끄기', 'add [이름] [역할] — 새 에이전트 추가 창', 'invite <이름> [역할] [분] — 바로 등록', 'invite pickle,vooy,instings — 피클·부이·인스팅스 대화방 일괄 초대', 'invite <초대URL> — 주소 파라미터대로 일괄/단독 입장', 'lead [이름|off] — 총괄 에이전트 지정/해제', 'call @이름 [@이름2] <지시> — 지정한 에이전트만 호출', 'orchestrate <지시> — 총괄이 팀원에게 하위 지시', 'reply <이름> <내용> — 수동 응답 입력', 'rm <이름> — 에이전트 삭제', 'run <작업내용> — 설정된 응답시간으로 디스패치', 'link [이름] [역할] — 초대 URL 발급', 'hook — 웹훅 엔드포인트', 'view 3d|2d|meet|term — 화면 전환', 'gather — 전원 대회의실 소집', 'clear — 로그 지우기']
         .forEach(t => termPush('HELP', t, 't-sys'));
       return;
     case 'status': {
@@ -3783,13 +3928,24 @@ async function execCmd(raw) {
       completeJob(j, p.join(' ')); return;
     }
     case 'invite': case '초대': {
-      if (/invite=1/.test(arg) || /^https?:/.test(arg)) {
+      const zteam = arg.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
+      if (zteam.length > 1 && zteam.every(t => TEAM_MAP[teamKey(t)])) {
+        const list = inviteMany(zteam, { room: 'meeting', conn: 'webhook', endpoint: DEFAULT_HOOK, method: 'get', lead: 'pickle', interval: 0.5, bulk: true });
+        setView('meet');
+        termPush('INVITE', `${list.map(a => a.name).join(' · ')} → 대회의실 · ${connLabel(list[0] || {})}`, 't-ok');
+        toast(`${list.map(a => a.name).join(' · ')} 대화방 일괄 입장`);
+        return;
+      }
+      if (/^https?:/.test(arg) || /[?&](invite|agents)=/.test(arg)) {
         try {
-          const u = new URL(arg);
+          const u = new URL(/^https?:/.test(arg) ? arg : 'https://x/?' + String(arg).replace(/^[?&]/, ''));
+          const q2 = u.searchParams;
+          if (parseTeamTokens(q2).length) { inviteFromURL(q2); termPush('INVITE', '주소 파라미터대로 일괄 입장', 't-ok'); return; }
           spawnInvited({
-            name: u.searchParams.get('name') || pickName('커스텀'), role: u.searchParams.get('role') || '커스텀',
-            room: u.searchParams.get('room') || 'work', color: u.searchParams.get('color') || '',
-            provider: u.searchParams.get('provider') || '', interval: u.searchParams.get('interval') || '', conn: u.searchParams.get('conn') || '',
+            name: q2.get('name') || pickName('커스텀'), role: q2.get('role') || '커스텀',
+            room: q2.get('room') || 'work', color: q2.get('color') || '',
+            provider: q2.get('provider') || '', interval: q2.get('interval') || '', conn: q2.get('conn') || '',
+            endpoint: q2.get('endpoint') || '', method: q2.get('method') || '',
           });
         } catch (e) { termPush('ERR', 'URL 파싱 실패', 't-err'); }
         return;
@@ -3843,7 +3999,7 @@ async function execCmd(raw) {
       const body = toks.slice(i).join(' ');
       if (!targets.length) { termPush('ERR', `'${toks[0]}' 이름의 에이전트가 없습니다.`, 't-err'); return; }
       if (!body) {
-        targets.forEach(a => termPush('CALL', `@${a.name} · ${a.role} · ${connOf(a).name} · 응답 ${intervalLabel(a.interval)}${a.lead ? ' · 👑총괄' : ''}`, 't-ok'));
+        targets.forEach(a => termPush('CALL', `@${a.name} · ${a.role} · ${connLabel(a)} · 응답 ${intervalLabel(a.interval)}${a.lead ? ' · 👑총괄' : ''}`, 't-ok'));
         return;
       }
       termPush('CALL', `${targets.map(a => '@' + a.name).join(', ')} 에게 지시`, 't-exec');
@@ -4053,7 +4209,7 @@ function setView(v) {
 function openModal(id) { const m = document.getElementById(id); if (m) m.classList.add('on'); }
 function closeModals() { $$('.modal').forEach(m => m.classList.remove('on')); }
 
-const AG = { editingId: null, provider: 'claude', conn: 'manual', interval: 5, role: '개발', color: PROVIDERS.claude.color, confirmDel: false, lead: false };
+const AG = { editingId: null, provider: 'claude', conn: 'manual', method: 'post', interval: 5, role: '개발', color: PROVIDERS.claude.color, confirmDel: false, lead: false };
 
 function agentModalHTML() {
   // 프리셋
@@ -4084,9 +4240,12 @@ function agentModalHTML() {
   // 조건부 필드
   document.getElementById('agEndpointWrap').classList.toggle('hidden', AG.conn !== 'webhook');
   document.getElementById('agKeyWrap').classList.toggle('hidden', AG.conn !== 'api');
+  const mw = document.getElementById('agMethods');
+  if (mw) mw.innerHTML = [['post', 'POST JSON'], ['get', 'GET 쿼리']].map(([id, label]) =>
+    `<button data-method="${id}" class="${(AG.method || 'post') === id ? 'sel' : ''}">${label}</button>`).join('');
   const hint = document.getElementById('agConnHint');
   const pv = PROVIDERS[AG.provider];
-  if (AG.conn === 'webhook') hint.textContent = '내 서버·n8n·Make·자체 봇 주소로 POST합니다. 응답 본문의 reply/text/message를 회의실에 표시합니다.';
+  if (AG.conn === 'webhook') hint.textContent = (AG.method === 'get' ? 'GET 쿼리' : 'POST JSON') + ' 방식으로 내 서버·n8n·Make·자체 봇을 호출합니다. 응답 본문의 reply/text/message를 회의실에 표시합니다.';
   else if (AG.conn === 'api') hint.textContent = pv.id === 'claude' || pv.id === 'gpt' || pv.id === 'gemini'
     ? `${pv.name} API를 브라우저에서 직접 호출합니다. 키는 이 브라우저(localStorage)에만 저장되니 공용 PC에서는 쓰지 마세요.`
     : `${pv.name}은(는) API 직접 호출을 지원하지 않습니다. 웹훅 URL을 사용하세요.`;
@@ -4100,6 +4259,7 @@ function openAgentModal(agent, prefill) {
   const pv = agent ? providerOf(agent) : (prefill && prefill.provider ? PROVIDERS[prefill.provider] : PROVIDERS.claude) || PROVIDERS.claude;
   AG.provider = pv.id;
   AG.conn = agent ? agent.conn : 'manual';
+  AG.method = agent ? (agent.method || 'post') : 'post';
   AG.interval = agent ? agent.interval : 5;
   AG.role = agent ? agent.role : (prefill && prefill.role ? prefill.role : pv.role);
   AG.color = agent ? agent.color : pv.color;
@@ -4128,6 +4288,7 @@ function saveAgentForm() {
   const endpoint = document.getElementById('agEndpoint').value.trim();
   const apiKey = document.getElementById('agApiKey').value.trim();
   const room = document.getElementById('agRoom').value;
+  const method = normMethod(AG.method);
   if (AG.conn === 'webhook' && !endpoint) { toast('웹훅 엔드포인트 URL이 필요합니다'); return; }
   if (AG.conn === 'api' && !API_CALL[pv.id]) { toast(pv.name + '은 API 직접 호출을 지원하지 않습니다 · 웹훅을 선택하세요'); return; }
   const existing = AG.editingId ? S.agents.find(a => a.id === AG.editingId) : null;
@@ -4135,26 +4296,26 @@ function saveAgentForm() {
   if (existing) {
     existing.name = name; existing.role = role; existing.desc = desc;
     existing.provider = pv.id; existing.icon = pv.icon; existing.color = AG.color;
-    existing.conn = AG.conn; existing.endpoint = endpoint; existing.apiKey = apiKey;
+    existing.conn = AG.conn; existing.endpoint = endpoint; existing.method = method; existing.apiKey = apiKey;
     existing.interval = Number(AG.interval); existing.model = pv.model;
     if (AG.lead) S.agents.forEach(x => { x.lead = x.id === existing.id; });
     else existing.lead = false;
     if (existing.seat && existing.seat.kind !== room) goToRoom(existing, room);
     else if (!existing.seat) goToRoom(existing, room);
-    termPush('OK', `${name} 수정 · ${pv.name} · ${connOf(existing).name} · 응답 ${intervalLabel(existing.interval)}${existing.lead ? ' · 총괄' : ''}`, 't-ok');
+    termPush('OK', `${name} 수정 · ${pv.name} · ${connLabel(existing)} · 응답 ${intervalLabel(existing.interval)}${existing.lead ? ' · 총괄' : ''}`, 't-ok');
     if (existing.lead) addMessage(S.activeRoom, 'sys', { text: `👑 ${name} 이(가) 총괄 에이전트로 지정되었습니다. @${name} 로 지시하면 팀원에게 하위 지시를 냅니다.` });
   } else {
     const a = addAgent({
       name, role, color: AG.color, provider: pv.id, icon: pv.icon, desc,
-      conn: AG.conn, endpoint, apiKey, interval: Number(AG.interval), tag: role === '총괄' ? '비서' : '봇', seat: room, lead: AG.lead,
+      conn: AG.conn, endpoint, method, apiKey, interval: Number(AG.interval), tag: role === '총괄' ? '비서' : '봇', seat: room, lead: AG.lead,
     }, { x: 8.0, y: 10.25, seatKind: room });
     if (a.lead) S.agents.forEach(x => { x.lead = x.id === a.id; });
     if (a.seat && a.seat.kind === 'work') a.homeSeat = a.seat;
     if (!a.seat) { a.state = 'idle'; a.path = []; }
     S.selected = a.id;
     say(a, `${name} 입장했습니다!`, 4);
-    addMessage('meeting', 'sys', { text: `${name}(${pv.name} · ${role}) 님이 합류했습니다 · 응답 ${intervalLabel(a.interval)} · ${connOf(a).name}${a.lead ? ' · 👑 총괄' : ''}` });
-    termPush('ADD', `${name} · ${pv.name} · ${connOf(a).conn ? connOf(a).name : ''} · 응답 ${intervalLabel(a.interval)}`, 't-ok');
+    addMessage('meeting', 'sys', { text: `${name}(${pv.name} · ${role}) 님이 합류했습니다 · 응답 ${intervalLabel(a.interval)} · ${connLabel(a)}${a.lead ? ' · 👑 총괄' : ''}` });
+    termPush('ADD', `${name} · ${pv.name} · ${a.conn ? connLabel(a) : ''} · 응답 ${intervalLabel(a.interval)}`, 't-ok');
     toast(`${name} 님이 합류했습니다`);
   }
   save(); renderAll(); closeModals();
@@ -4185,6 +4346,11 @@ function buildAgentModal() {
   document.getElementById('agConns').onclick = e => {
     const b = e.target.closest('[data-conn]'); if (!b) return;
     AG.conn = b.dataset.conn; agentModalHTML();
+  };
+  const agM = document.getElementById('agMethods');
+  if (agM) agM.onclick = e => {
+    const b = e.target.closest('[data-method]'); if (!b) return;
+    AG.method = b.dataset.method; agentModalHTML();
   };
   document.getElementById('agIntervals').onclick = e => {
     const b = e.target.closest('[data-interval]'); if (!b) return;
@@ -4246,9 +4412,10 @@ function linkCfg() {
 function refreshLink() {
   const c = linkCfg();
   const rawInvite = inviteURL(c), rawHook = hookURL({ agent: c.name, room: c.room, msg: '보고: 작업 완료했습니다.' });
-  const u = document.getElementById('lkUrl'), h = document.getElementById('lkHook');
+  const u = document.getElementById('lkUrl'), h = document.getElementById('lkHook'), bl = document.getElementById('lkBulk');
   if (u) { u.dataset.raw = rawInvite; u.textContent = decodeURIComponent(rawInvite); }
   if (h) { h.dataset.raw = rawHook; h.textContent = decodeURIComponent(rawHook); }
+  if (bl) { const rawBulk = bulkInviteURL(); bl.dataset.raw = rawBulk; bl.textContent = decodeURIComponent(rawBulk); }
   const side = document.getElementById('sideHook'); if (side) side.textContent = decodeURIComponent(hookURL({}));
 }
 
@@ -4337,8 +4504,9 @@ function showAgentCard(a) {
     <div class="chips2">
       ${a.lead ? '<span class="tag sec" style="border:1px solid rgba(246,214,168,.4);color:#f6d6a8">👑 총괄</span>' : ''}
       <span class="tag" style="color:${shade(pv.color, .3)};border-color:${rgba(pv.color, .45)}">⏱ 응답 ${esc(intervalLabel(a.interval))}</span>
-      <span class="tag">${esc(connOf(a).name)}</span>
+      <span class="tag">${esc(connLabel(a))}</span>
     </div>
+    ${a.conn === 'webhook' && a.endpoint ? `<div class="hintline" style="margin:0 0 7px;font:11px/1.5 ui-monospace,monospace;color:#8b8074;word-break:break-all">${esc(a.endpoint)}</div>` : ''}
     <div class="st"><span class="dot" style="background:${a.enabled ? '#79d3a2' : '#8b8074'}"></span> ${room} · ${st}${j ? ` · <b data-clock style="color:#f0c469">⚡ ${jobClock(j)}</b>` : ''}</div>
     <div class="acts">
       <button class="btn sm" data-go="meeting" data-id="${a.id}">대회의실</button>
@@ -4353,6 +4521,42 @@ function showAgentCard(a) {
 }
 
 /* ---------------- boot ---------------- */
+function parseTeamTokens(q) {
+  const raw = [];
+  const push = v => {
+    if (v == null) return;
+    String(v).split(/[,|+\s]+/).forEach(t => { const s = t.trim(); if (s) raw.push(s); });
+  };
+  push(q.get('agents'));
+  push(q.get('team'));
+  q.getAll('agent').forEach(push);
+  const inv = q.get('invite');
+  if (inv && !/^(1|true|yes|on)$/i.test(inv)) push(inv);
+  return raw;
+}
+function inviteFromURL(q) {
+  const tokens = parseTeamTokens(q);
+  if (!tokens.length) return false;
+  const bulk = tokens.length > 1;
+  const room = normRoomId(q.get('room'), bulk ? 'meeting' : 'work');
+  const conn = q.get('conn') || '';
+  const endpoint = q.get('endpoint') || (conn === 'webhook' || bulk ? DEFAULT_HOOK : '');
+  const list = inviteMany(tokens, {
+    room,
+    conn: conn || (endpoint ? 'webhook' : 'manual'),
+    endpoint,
+    method: q.get('method') || (bulk ? 'get' : ''),
+    interval: q.get('interval') || (bulk ? 0.5 : ''),
+    lead: q.get('lead') || '',
+    bulk,
+  });
+  if (!list.length) return false;
+  const vmap = { meet: 'meet', meeting: 'meet', '3d': 'v3d', v3d: 'v3d', '2d': 'v2d', v2d: 'v2d', term: 'term', terminal: 'term' };
+  setView(vmap[String(q.get('view') || '').toLowerCase()] || (room === 'meeting' ? 'meet' : S.view));
+  toast(`${list.map(a => a.name + (a.lead ? '(👑 총괄)' : '')).join(' · ')} — ${ROOMNAME[room]} 입장`);
+  termPush('URL', `GET invite · ${tokens.join(',')} · room=${room} · ${conn || 'auto conn'} · ${q.get('method') || 'auto method'}${q.get('lead') ? ' · lead=' + q.get('lead') : ''}`, 't-sys');
+  return true;
+}
 function handleURL() {
   const q = new URLSearchParams(location.search);
   if (q.get('hook') === '1') {
@@ -4370,13 +4574,19 @@ function handleURL() {
     termPush('OK', '200 OK · message injected', 't-ok');
     return true;
   }
+  // GET 다중 초대 — ?invite=pickle,vooy,instings / ?invite=1&agents=... / ?agents=...
+  if (inviteFromURL(q)) {
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { }
+    return true;
+  }
   if (q.get('invite') === '1') {
     if (q.get('name') || q.get('provider')) {
       spawnInvited({
         name: q.get('name') || '', role: q.get('role') || '커스텀', room: q.get('room') || 'work',
         color: q.get('color') || '', provider: q.get('provider') || '', interval: q.get('interval') || '',
-        conn: q.get('conn') || '',
+        conn: q.get('conn') || '', endpoint: q.get('endpoint') || '', method: q.get('method') || '',
       });
+      try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { }
       return true;
     }
     setTimeout(() => openModal('mLink'), 600);
@@ -4422,6 +4632,29 @@ function boot() {
   const lkTest = document.getElementById('lkTest'); if (lkTest) lkTest.onclick = () => { const c = linkCfg(); closeModals(); spawnInvited(c); termPush('LINK', 'test-enter · ' + c.name, 't-exec'); setView('v3d'); };
   const lkQr = document.getElementById('lkQrHint'); if (lkQr) lkQr.onclick = () => { toast('GitHub Pages: Settings → Pages → Deploy from branch(main / root)'); termPush('SYS', 'GitHub Pages 배포: Settings → Pages → Branch: main / (root). index.html 자동 서빙.', 't-sys'); };
   const lkHookCopy = document.getElementById('lkHookCopy'); if (lkHookCopy) lkHookCopy.onclick = () => { const el = document.getElementById('lkHook'); copyText(el.dataset.raw || el.textContent); toast('웹훅 주소를 복사했습니다'); };
+  // 👥 피클 · 부이 · 인스팅스 대화방 일괄 초대
+  const bulkGo = document.getElementById('lkBulkGo');
+  if (bulkGo) bulkGo.onclick = () => {
+    closeModals();
+    const list = inviteMany(['pickle', 'vooy', 'instings'], { room: 'meeting', conn: 'webhook', endpoint: DEFAULT_HOOK, method: 'get', lead: 'pickle', interval: 0.5, bulk: true });
+    setView('meet');
+    toast(`${list.map(a => a.name).join(' · ')} ${list.length}명 대화방 일괄 입장`);
+    termPush('INVITE', `team-invite · ${list.map(a => a.name).join(', ')} → 대회의실 · ${connLabel(list[0] || {})}`, 't-ok');
+  };
+  const bulkCopy = document.getElementById('lkBulkCopy');
+  if (bulkCopy) bulkCopy.onclick = () => { copyText(bulkInviteURL()); toast('일괄 초대 주소를 복사했습니다'); };
+  const bulkHook = document.getElementById('lkBulkHook');
+  if (bulkHook) bulkHook.onclick = () => {
+    const u = new URL(DEFAULT_HOOK);
+    u.searchParams.set('agent', '피클');
+    u.searchParams.set('provider', 'pickle');
+    u.searchParams.set('role', '총괄');
+    u.searchParams.set('room', 'meeting');
+    u.searchParams.set('message', '연결 테스트: 한 줄로 인사해 주세요');
+    copyText(u.toString());
+    termPush('WEBHOOK', 'GET 예시 → ' + u.toString(), 't-hook');
+    toast('웹훅 GET 예시 주소를 복사했습니다');
+  };
   const lkHookTest = document.getElementById('lkHookTest'); if (lkHookTest) lkHookTest.onclick = () => {
     const agent = document.getElementById('lkName').value.trim() || '클로드';
     const room = document.getElementById('lkRoom').value;

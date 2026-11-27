@@ -51,3 +51,37 @@
 
 - `?invite=1&name=이름&role=역할&room=work&provider=claude&interval=5` — 주소를 열면 같은 설정으로 입장
 - `?hook=1&agent=이름&room=meeting&msg=내용` — 외부 자동화가 메시지를 밀어넣는 엔드포인트
+
+## GET 한 번으로 팀 일괄 초대 (피클 · 부이 · 인스팅스)
+
+아래 주소를 주소창에 붙여 열면 세 에이전트가 **한 번에 대회의실(대화방)** 로 들어오고, 연결이 `웹훅(GET)` + `https://ai-office-webhook.clamp815.workers.dev/` 로 맞춰집니다. 피클이 👑 총괄이 됩니다.
+
+```
+https://clamp815-kss.github.io/ai-office/?invite=pickle,vooy,instings&room=meeting&conn=webhook&endpoint=https://ai-office-webhook.clamp815.workers.dev/&method=get&lead=pickle
+```
+
+지원 파라미터
+
+| 파라미터 | 값 | 설명 |
+|---|---|---|
+| `invite` | `pickle,vooy,instings` 또는 `1` | 쉼표 목록 그대로 일괄 초대. `1` 이면 `agents` 목록을 사용 |
+| `agents` | `pickle,vooy,instings` | `invite` 없이도 동작 |
+| `room` | `meeting` · `command` · `lounge` · `work` | 여러 명이면 기본 `meeting` |
+| `conn` | `webhook` · `api` · `sim` · `manual` | `endpoint` 가 있거나 일괄 초대면 기본 `webhook` |
+| `endpoint` | 웹훅 URL | 없으면 `ai-office-webhook` 주소를 기본값으로 연결 |
+| `method` | `get` · `post` | `get` 이면 `?agent=…&provider=…&role=…&room=…&message=…` 로 호출 |
+| `lead` | `pickle` 등 | 총괄로 지정 |
+| `interval` | `0.5`~`60` (분) | 일괄 초대 기본 0.5(30초) |
+| `view` | `meet` · `v3d` · `v2d` · `term` | 다중 초대 + `room=meeting` 이면 자동 `meet` |
+
+별칭: `pickle`/`피클`/`uriel`/`우리엘` · `vooy`/`부이` · `instings`/`인스팅스` · `claude`/`클로드` · `gpt`/`지피티` · `gemini`/`제미나이`. 같은 이름·제공자의 에이전트가 이미 있으면 새로 만들지 않고 그 방으로 옮기며 연결만 갱신합니다. 처리 후 쿼리스트링은 `history.replaceState` 로 정리되어 F5 로 새로고침해도 중복 실행되지 않습니다.
+
+터미널에서도 `invite pickle,vooy,instings` 로 같은 일괄 초대가 됩니다. 초대 주소 모달(`🔗 초대 주소`)에는 **👥 피클 · 부이 · 인스팅스 대화방 일괄 초대** 카드가 있습니다.
+
+### 웹훅 GET 호출
+
+```
+https://ai-office-webhook.clamp815.workers.dev/?agent=피클&provider=pickle&role=총괄&room=meeting&message=할말
+```
+
+브라우저 주소창에서 열면 답이 바로 보이고(`text/html`), 앱·스크립트에서 `Accept: application/json` 으로 부르면 `{"reply": "…", "model": "…"}` 를 돌려줍니다. POST JSON 방식도 그대로 동작합니다.
