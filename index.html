@@ -4115,7 +4115,7 @@ function renderBots() {
       ${avatarHTML(a)}
       <div class="info">
         <div class="nm">${esc(a.name)}${a.lead ? ' <span class="cwbadge on" data-lead="' + a.id + '" title="총괄 해제">👑</span>' : ' <span class="cwbadge" data-lead="' + a.id + '" title="총괄 에이전트로 지정">👑</span>'} <span class="tag ${a.tag === '비서' ? 'sec' : ''}" style="border-color:${rgba(pv.color, .5)};color:${shade(pv.color, .35)}">${esc(pv.name)}</span></div>
-        <div class="rl" title="${esc(connOf(a).name)} · ${esc(connOf(a).desc)}">${a.lead ? '<b style="color:#f0c469">총괄</b> · ' : ''}${esc(a.role)} · ⏱ ${esc(intervalLabel(a.interval))}${a.conn === 'webhook' ? ' · <span style="color:#8fbfa6">' + esc(connLabel(a)) + '</span>' : ''}${j ? ' · <b style="color:#f0c469">⚡ ' + jobClock(j) + '</b>' : ''}</div>
+        <div class="rl" title="${esc(connOf(a).name)} · ${esc(connOf(a).desc)}">${a.lead ? '<b style="color:#f0c469">총괄</b> · ' : ''}${a.role !== '총괄' ? esc(a.role) + ' · ' : ''}${a.conn === 'webhook' ? '<span style="color:#8fbfa6">' + esc(connLabel(a)) + '</span> · ' : ''}⏱ ${esc(intervalLabel(a.interval))}${j ? ' · <b style="color:#f0c469">⚡ ' + jobClock(j) + '</b>' : ''}</div>
       </div>
       <button class="mini" data-edit="${a.id}" title="편집">✎</button>
       <button class="mini" data-del="${a.id}" title="삭제">🗑</button>
