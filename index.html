@@ -1409,19 +1409,19 @@ function emit(ev, data) { (BUS[ev] || []).forEach(fn => { try { fn(data); } catc
    ============================================================ */
 const C3 = document.getElementById('c3d');
 const ctx3 = C3.getContext('2d');
-const DEFAULT_CAM = { yaw: 0.17, pitch: 0.60, dist: 13.4, tx: 8.0, ty: 5.6, tz: 0.45 };
+const DEFAULT_CAM = { yaw: 0.14, pitch: 0.62, dist: 13.6, tx: 8.0, ty: 5.5, tz: 0.5 };
 const CAM = Object.assign({ fov: 0.96 }, DEFAULT_CAM);
 let V3 = null, CAMPOS = { x: 0, y: 0, z: 0 }, CW = 0, CH = 0;
 let showLabels = true;
 
 const MAT = {
-  wall: '#4a3a2a', wallCap: '#5e4a36', wallIn: '#2c2118',
-  floor: ['#4b3524', '#422d1d', '#523a27', '#47311f'],
-  deskTop: '#7d5636', deskEdge: '#95683f', deskBody: '#4e3826',
-  metal: '#282420', screenFrame: '#14161a',
-  glass: 'rgba(150,205,225,.09)',
-  sofa: '#5e3628', sofaCushion: '#754634', sofaBack: '#4c2b20',
-  slate: '#2b2f36', rug: '#553528',
+  wall: '#f0c6aa', wallCap: '#fbe3d1', wallIn: '#e8c9b3',
+  floor: ['#e0ab84', '#d9a179', '#e8b58e', '#d1986f'],
+  deskTop: '#f0c7a4', deskEdge: '#f9ddc0', deskBody: '#f2d4b6',
+  metal: '#e6d6c2', screenFrame: '#fdf4e7',
+  glass: 'rgba(214,240,232,.14)',
+  sofa: '#f2b394', sofaCushion: '#fadaca', sofaBack: '#e39b7c',
+  slate: '#f2e3cf', rug: '#f7e8d5',
 };
 
 const TEX = new Map();
@@ -1508,9 +1508,9 @@ function box(cx, cy, z0, w, d, h, col, o = {}) {
   q(dep, () => {
     const x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - d / 2, y1 = cy + d / 2, z1 = z0 + h;
     if (CAMPOS.y > y1) poly([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]], shade(col, o.south != null ? o.south : 0.03));
-    if (CAMPOS.y < y0) poly([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], shade(col, -0.34));
-    if (CAMPOS.x > x1) poly([[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]], shade(col, -0.14));
-    if (CAMPOS.x < x0) poly([[x0, y0, z0], [x0, y1, z0], [x0, y1, z1], [x0, y0, z1]], shade(col, -0.40));
+    if (CAMPOS.y < y0) poly([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], shade(col, o.northFace != null ? o.northFace : -0.34));
+    if (CAMPOS.x > x1) poly([[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]], shade(col, o.eastFace != null ? o.eastFace : -0.14));
+    if (CAMPOS.x < x0) poly([[x0, y0, z0], [x0, y1, z0], [x0, y1, z1], [x0, y0, z1]], shade(col, o.westFace != null ? o.westFace : -0.40));
     if (o.top !== false) poly([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], shade(col, o.topShade != null ? o.topShade : 0.22));
   });
 }
@@ -1573,161 +1573,459 @@ function panelText(corner, u0, v0, u1, v1, text, sizeM, color, weight = 800, ali
   ctx3.restore();
 }
 
+/* ---------------- warm diorama helpers ---------------- */
+function rrect2(x0, y0, x1, y1, r, n = 5) {
+  r = Math.max(0.001, Math.min(r, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2));
+  const cs = [[x1 - r, y1 - r, 0], [x0 + r, y1 - r, Math.PI / 2], [x0 + r, y0 + r, Math.PI], [x1 - r, y0 + r, Math.PI * 1.5]];
+  const pts = [];
+  for (const [cx, cy, a0] of cs) for (let i = 0; i <= n; i++) { const a = a0 + i / n * (Math.PI / 2); pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+  return pts;
+}
+function hPanel(x0, y0, x1, y1, r, z, n = 5) { return rrect2(x0, y0, x1, y1, r, n).map(p => [p[0], p[1], z]); }
+function vPanel(x0, z0, x1, z1, r, y, n = 5) { return rrect2(x0, z0, x1, z1, r, n).map(p => [p[0], y, p[1]]); }
+function ellPts(cx, cy, rx, ry, z, n = 30) {
+  const p = [];
+  for (let i = 0; i < n; i++) { const a = i / n * TAU; p.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, z]); }
+  return p;
+}
+function roundTop(cx, cy, z, w, d, r, col, amt = 0.3, hi = null) {
+  poly(hPanel(cx - w / 2, cy - d / 2, cx + w / 2, cy + d / 2, r, z), shade(col, amt));
+  if (hi != null) poly(hPanel(cx - w / 2 + 0.05, cy - d / 2 + 0.05, cx + w / 2 - 0.05, cy + d / 2 - 0.05, Math.max(0.02, r - 0.04), z + 0.0015), shade(col, hi));
+}
+function roundSlab(cx, cy, z0, w, d, h, r, col, o = {}) {
+  box(cx, cy, z0, w, d, h, col, o);
+  q(depthOf(cx, cy, z0 + h) + 0.001, () => {
+    poly(hPanel(cx - w / 2 + 0.012, cy - d / 2 + 0.012, cx + w / 2 - 0.012, cy + d / 2 - 0.012, r, z0 + h + 0.0008), shade(col, o.topShade != null ? o.topShade : 0.3));
+  });
+}
+function ovalTop(cx, cy, z, rx, ry, col, amt = 0.3, n = 34) {
+  poly(ellPts(cx, cy, rx, ry, z, n), shade(col, amt));
+}
+function ovalSide(cx, cy, z0, z1, rx, ry, col, n = 26) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) { const a = Math.PI * i / n; pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, z0]); }
+  for (let i = n; i >= 0; i--) { const a = Math.PI * i / n; pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, z1]); }
+  poly(pts, col);
+}
+function softShadow(x, y, rx, ry, a) {
+  const p = proj(x, y, 0.006); if (!p) return;
+  const e1 = proj(x + rx, y, 0.006), e2 = proj(x, y + ry, 0.006);
+  if (!e1 || !e2) return;
+  const RX = Math.max(1, Math.hypot(e1.x - p.x, e1.y - p.y));
+  const RY = Math.max(0.4, Math.hypot(e2.x - p.x, e2.y - p.y));
+  ctx3.save(); ctx3.globalAlpha = a;
+  ctx3.translate(p.x, p.y); ctx3.scale(1, RY / RX);
+  const g = ctx3.createRadialGradient(0, 0, 1, 0, 0, RX);
+  g.addColorStop(0, 'rgba(122,70,46,.62)'); g.addColorStop(0.5, 'rgba(122,70,46,.3)'); g.addColorStop(1, 'rgba(122,70,46,0)');
+  ctx3.fillStyle = g; ctx3.beginPath(); ctx3.arc(0, 0, RX, 0, TAU); ctx3.fill();
+  ctx3.restore();
+}
+function wallWash(x, y, z, rx, a, col) {
+  const p = proj(x, y, z); if (!p) return;
+  const e = proj(x + rx, y, z); if (!e) return;
+  const R = Math.max(2, Math.hypot(e.x - p.x, e.y - p.y));
+  ctx3.save(); ctx3.globalCompositeOperation = 'lighter'; ctx3.globalAlpha = a;
+  ctx3.translate(p.x, p.y); ctx3.scale(1, 1.4);
+  ctx3.drawImage(glowTex(col || '#ffc98a'), -R, -R, R * 2, R * 2);
+  ctx3.restore();
+}
+function quadGrad(c, stops) {
+  const p = c.map(x => proj(x[0], x[1], x[2]));
+  for (const v of p) if (!v) return;
+  ctx3.save();
+  ctx3.beginPath(); ctx3.moveTo(p[0].x, p[0].y);
+  for (let i = 1; i < p.length; i++) ctx3.lineTo(p[i].x, p[i].y);
+  ctx3.closePath();
+  const g = ctx3.createLinearGradient(0, (p[3].y + p[2].y) / 2, 0, (p[0].y + p[1].y) / 2);
+  stops.forEach(([o, cc]) => g.addColorStop(o, cc));
+  ctx3.fillStyle = g; ctx3.fill(); ctx3.restore();
+}
+
+function botGlyph(x, y, z, r, ink, dark) {
+  const p = proj(x, y, z); if (!p) return;
+  const R = Math.max(3, r * p.s);
+  ctx3.save(); ctx3.translate(p.x, p.y);
+  ctx3.strokeStyle = ink; ctx3.fillStyle = ink; ctx3.lineCap = 'round';
+  ctx3.lineWidth = Math.max(1, R * 0.13);
+  ctx3.beginPath(); ctx3.moveTo(0, -R * 0.9); ctx3.lineTo(0, -R * 1.16); ctx3.stroke();
+  ctx3.beginPath(); ctx3.arc(0, -R * 1.24, R * 0.15, 0, TAU); ctx3.fill();
+  const w = R * 1.5, h = R * 1.16;
+  roundRect(ctx3, -w / 2, -h * 0.56, w, h, R * 0.34); ctx3.fill();
+  ctx3.fillStyle = dark;
+  [-1, 1].forEach(sd => { ctx3.beginPath(); ctx3.arc(sd * w * 0.21, -h * 0.08, R * 0.15, 0, TAU); ctx3.fill(); });
+  ctx3.strokeStyle = dark; ctx3.lineWidth = Math.max(1, R * 0.1);
+  ctx3.beginPath(); ctx3.arc(0, h * 0.06, R * 0.19, 0.2 * Math.PI, 0.8 * Math.PI); ctx3.stroke();
+  ctx3.restore();
+}
+
 /* ---------------- floor ---------------- */
 function drawFloor3() {
-  poly([[0, 0, 0], [W.w, 0, 0], [W.w, W.d, 0], [0, W.d, 0]], '#2a1d12');
-  const rows = 22;
+  // 두꺼운 크림 디오라마 베이스
+  poly([[-0.34, W.d + 0.06, -0.38], [W.w + 0.34, W.d + 0.06, -0.38], [W.w + 0.34, W.d + 0.06, 0.035], [-0.34, W.d + 0.06, 0.035]], '#fbe4d9');
+  poly([[-0.34, -0.34, -0.38], [-0.34, W.d + 0.06, -0.38], [-0.34, W.d + 0.06, 0.035], [-0.34, -0.34, 0.035]], '#e6cdb2');
+  poly([[W.w + 0.34, -0.34, -0.38], [W.w + 0.34, W.d + 0.06, -0.38], [W.w + 0.34, W.d + 0.06, 0.035], [W.w + 0.34, -0.34, 0.035]], '#efdac2');
+  poly([[-0.34, -0.34, 0.035], [W.w + 0.34, -0.34, 0.035], [W.w + 0.34, W.d + 0.06, 0.035], [-0.34, W.d + 0.06, 0.035]], '#fdf0e7');
+  // 꿀빛 원목 마루
+  poly([[0, 0, 0], [W.w, 0, 0], [W.w, W.d, 0], [0, W.d, 0]], '#cf9668');
+  const rows = 24, rh = W.d / rows;
   for (let i = 0; i < rows; i++) {
-    const y0 = i * (W.d / rows), y1 = (y0 + W.d / rows);
+    const y0 = i * rh, y1 = y0 + rh;
     poly([[0.02, y0, 0.001], [W.w - 0.02, y0, 0.001], [W.w - 0.02, y1, 0.001], [0.02, y1, 0.001]], MAT.floor[i % 4]);
-    poly([[0.02, y0, 0.002], [W.w - 0.02, y0, 0.002], [W.w - 0.02, y0 + 0.014, 0.002], [0.02, y0 + 0.014, 0.002]], 'rgba(0,0,0,.32)');
-    let x = ((i * 3.7) % 2.2);
-    while (x < W.w) {
-      const p = proj(x, y0, 0.003), q2 = proj(x, y1, 0.003);
-      if (p && q2) { ctx3.beginPath(); ctx3.moveTo(p.x, p.y); ctx3.lineTo(q2.x, q2.y); ctx3.strokeStyle = 'rgba(0,0,0,.20)'; ctx3.lineWidth = 0.8; ctx3.stroke(); }
-      x += 2.2 + (i % 3) * 0.7;
+    poly([[0.02, y0, 0.0016], [W.w - 0.02, y0, 0.0016], [W.w - 0.02, y0 + 0.011, 0.0016], [0.02, y0 + 0.011, 0.0016]], 'rgba(158,106,66,.26)');
+    poly([[0.02, y0 + 0.014, 0.0019], [W.w - 0.02, y0 + 0.014, 0.0019], [W.w - 0.02, y0 + 0.032, 0.0019], [0.02, y0 + 0.032, 0.0019]], 'rgba(255,238,210,.17)');
+    let x = ((i * 3.1) % 1.9) + 0.35;
+    while (x < W.w - 0.25) {
+      const p = proj(x, y0, 0.0022), q2 = proj(x, y1, 0.0022);
+      if (p && q2) { ctx3.beginPath(); ctx3.moveTo(p.x, p.y); ctx3.lineTo(q2.x, q2.y); ctx3.strokeStyle = 'rgba(158,106,66,.20)'; ctx3.lineWidth = 0.8; ctx3.stroke(); }
+      x += 1.75 + (i % 4) * 0.5;
     }
   }
-  // 대회의실 슬레이트
-  const M = ROOMS[0];
-  poly([[M.x, M.y, 0.004], [M.x + M.w, M.y, 0.004], [M.x + M.w, M.y + M.d, 0.004], [M.x, M.y + M.d, 0.004]], MAT.slate);
-  for (let gx = M.x; gx <= M.x + M.w + 0.01; gx += 0.55) {
-    const a = proj(gx, M.y, 0.005), b = proj(gx, M.y + M.d, 0.005);
-    if (a && b) { ctx3.beginPath(); ctx3.moveTo(a.x, a.y); ctx3.lineTo(b.x, b.y); ctx3.strokeStyle = 'rgba(255,255,255,.055)'; ctx3.lineWidth = 1; ctx3.stroke(); }
-  }
-  for (let gy = M.y; gy <= M.y + M.d + 0.01; gy += 0.55) {
-    const a = proj(M.x, gy, 0.005), b = proj(M.x + M.w, gy, 0.005);
-    if (a && b) { ctx3.beginPath(); ctx3.moveTo(a.x, a.y); ctx3.lineTo(b.x, b.y); ctx3.strokeStyle = 'rgba(255,255,255,.045)'; ctx3.lineWidth = 1; ctx3.stroke(); }
-  }
-  // 지휘실 플랫폼
+  // 지휘실 — 살짝 높은 크림 플랫폼
   const C = ROOMS[1];
-  box(C.x + C.w / 2, C.y + C.d / 2, 0, C.w, C.d, 0.08, '#3e2c1e');
-  poly([[C.x + 0.08, C.y + C.d - 0.14, 0.084], [C.x + C.w - 0.08, C.y + C.d - 0.14, 0.084], [C.x + C.w - 0.08, C.y + C.d - 0.08, 0.084], [C.x + 0.08, C.y + C.d - 0.08, 0.084]], 'rgba(246,214,168,.18)');
-  // 입구 라운지 포프
-  [[6.3, 9.4], [9.7, 9.4]].forEach(([x, y]) => { cyl(x, y, 0, 0.34, 0.34, '#5b4030', 14); cyl(x, y, 0.34, 0.3, 0.06, '#7a5540', 14); });
-  // 라운지 러그
-  const L = ROOMS[2];
-  poly([[L.x + 0.3, L.y + 0.85, 0.006], [L.x + L.w - 0.3, L.y + 0.85, 0.006], [L.x + L.w - 0.3, L.y + L.d - 0.45, 0.006], [L.x + 0.3, L.y + L.d - 0.45, 0.006]], MAT.rug);
-  poly([[L.x + 0.42, L.y + 0.96, 0.007], [L.x + L.w - 0.42, L.y + 0.96, 0.007], [L.x + L.w - 0.42, L.y + L.d - 0.56, 0.007], [L.x + 0.42, L.y + L.d - 0.56, 0.007]], null, 'rgba(226,192,150,.24)', 2);
-  // 워크스테이션 러너
-  poly([[0.5, 7.28, 0.006], [15.5, 7.28, 0.006], [15.5, 7.62, 0.006], [0.5, 7.62, 0.006]], '#3b2a1d');
+  box(C.x + C.w / 2, C.y + C.d / 2, 0, C.w - 0.1, C.d - 0.1, 0.06, '#efd9c0');
+  q(depthOf(C.x + C.w / 2, C.y + C.d / 2, 0.07) + 0.001, () => {
+    poly(hPanel(C.x + 0.1, C.y + 0.1, C.x + C.w - 0.1, C.y + C.d - 0.1, 0.16, 0.062), '#f9ecdb');
+    poly(hPanel(C.x + 0.18, C.y + 0.18, C.x + C.w - 0.18, C.y + C.d - 0.18, 0.14, 0.0635), null, 'rgba(226,178,128,.4)', 1.6);
+  });
+  // 회의 존 — 둥근 베이지 러그
+  const M = ROOMS[0];
+  poly(ellPts(TABLE.x, TABLE.y, 2.62, 1.66, 0.004, 40), '#efd9bd');
+  poly(ellPts(TABLE.x, TABLE.y, 2.44, 1.5, 0.0045, 40), '#f7e7d1');
+  poly(ellPts(TABLE.x, TABLE.y, 2.62, 1.66, 0.005, 40), null, 'rgba(226,192,158,.55)', 1.6);
+  // 라운지 — 둥근 러그
+  poly(ellPts(13.05, 2.3, 2.36, 1.58, 0.004, 40), '#f0d6c2');
+  poly(ellPts(13.05, 2.3, 2.16, 1.42, 0.0045, 40), '#f8e6d8');
+  poly(ellPts(13.05, 2.3, 2.36, 1.58, 0.005, 40), null, 'rgba(232,178,158,.5)', 1.6);
   // 입구 매트
-  poly([[6.9, 10.1, 0.006], [9.1, 10.1, 0.006], [9.1, 10.62, 0.006], [6.9, 10.62, 0.006]], '#463222');
-  const ms = proj(8.0, 10.36, 0.008);
+  poly([[6.9, 10.1, 0.006], [9.1, 10.1, 0.006], [9.1, 10.6, 0.006], [6.9, 10.6, 0.006]], '#e9cbb0');
+  poly([[7.02, 10.2, 0.007], [8.98, 10.2, 0.007], [8.98, 10.5, 0.007], [7.02, 10.5, 0.007]], null, 'rgba(255,247,236,.85)', 1.4);
+  const ms = proj(8.0, 10.36, 0.009);
   if (ms) {
-    ctx3.save(); ctx3.font = `800 ${Math.max(6, 0.12 * ms.s)}px var(--mono, monospace)`;
-    ctx3.fillStyle = 'rgba(246,214,168,.55)'; ctx3.textAlign = 'center'; ctx3.fillText('ENTRANCE', ms.x, ms.y); ctx3.restore();
+    ctx3.save(); ctx3.font = `800 ${Math.max(6, 0.105 * ms.s)}px var(--mono, monospace)`;
+    ctx3.fillStyle = 'rgba(150,104,68,.75)'; ctx3.textAlign = 'center'; ctx3.fillText('ENTRANCE', ms.x, ms.y); ctx3.restore();
   }
-  // 조명 풀
-  [[2.6, 2.4], [6.2, 6.9], [9.8, 6.9], [13.4, 6.9], [8, 9.3], [8, 2.3], [13.5, 2.4]].forEach(([x, y]) => glowDisc(x, y, 1.9, '#ffcf94', 0.055));
+  // 입구 포프 (둥근 크림)
+  [[6.3, 9.4], [9.7, 9.4]].forEach(([x, y]) => { softShadow(x, y, 0.4, 0.4, 0.4); cyl(x, y, 0, 0.3, 0.26, '#f2ddc6', 16); cyl(x, y, 0.26, 0.34, 0.07, '#fbeeda', 16); });
+  // 벽 밑 접지 그림자 (AO)
+  quadGrad([[0.3, 0.3, 0.0035], [W.w - 0.3, 0.3, 0.0035], [W.w - 0.3, 1.15, 0.0035], [0.3, 1.15, 0.0035]], [[0, 'rgba(122,70,46,.24)'], [0.45, 'rgba(122,70,46,.08)'], [1, 'rgba(122,70,46,0)']]);
+  quadGrad([[0.3, 0.3, 0.0035], [1.15, 0.3, 0.0035], [1.15, W.d - 0.4, 0.0035], [0.3, W.d - 0.4, 0.0035]], [[0, 'rgba(122,70,46,.22)'], [0.45, 'rgba(122,70,46,.07)'], [1, 'rgba(122,70,46,0)']]);
+  quadGrad([[W.w - 0.3, 0.3, 0.0035], [W.w - 1.15, 0.3, 0.0035], [W.w - 1.15, W.d - 0.4, 0.0035], [W.w - 0.3, W.d - 0.4, 0.0035]], [[0, 'rgba(122,70,46,.2)'], [0.45, 'rgba(122,70,46,.06)'], [1, 'rgba(122,70,46,0)']]);
+  // 따뜻한 조명 웅덩이
+  [[2.6, 2.4], [6.2, 6.9], [9.8, 6.9], [13.4, 6.9], [8, 9.3], [8, 2.3], [13.5, 2.4], [3.2, 8.0], [12.0, 8.2]].forEach(([x, y]) => glowDisc(x, y, 2.15, '#ffc98a', 0.032));
+}
+
+function floorLamp3(x, y) {
+  softShadow(x, y, 0.4, 0.4, 0.4);
+  cyl(x, y, 0, 0.16, 0.04, '#d9b489', 12);
+  cyl(x, y, 0.04, 0.02, 1.28, '#c79a63', 8);
+  q(depthOf(x, y, 1.44) - 0.003, () => {
+    const p = proj(x, y, 1.42); if (!p) return;
+    const R = 0.15 * p.s;
+    ctx3.save();
+    ctx3.beginPath(); ctx3.ellipse(p.x, p.y - R * 0.3, R * 1.05, R * 0.95, 0, Math.PI, TAU);
+    ctx3.fillStyle = '#f7dcb4'; ctx3.fill();
+    const g = ctx3.createRadialGradient(p.x, p.y, 0.5, p.x, p.y, R);
+    g.addColorStop(0, '#fffdf4'); g.addColorStop(0.55, '#ffe8c0'); g.addColorStop(1, '#f3c184');
+    ctx3.beginPath(); ctx3.arc(p.x, p.y, R * 0.8, 0, TAU); ctx3.fillStyle = g; ctx3.fill();
+    ctx3.restore();
+    drawGlow(p.x, p.y, R * 5.5, '#ffcf94', 0.2);
+  });
+  glowDisc(x, y, 1.0, '#ffc98a', 0.05);
 }
 
 /* ---------------- walls ---------------- */
 function drawWalls3() {
   const wall = MAT.wall, cap = MAT.wallCap;
-  box(W.w / 2, 0.16, 0, W.w, 0.32, W.h, wall, { south: -0.12 });
-  box(W.w / 2, 0.16, W.h, W.w, 0.42, 0.1, cap);
-  box(0.16, W.d / 2, 0, 0.32, W.d, W.h, '#3d3024');
-  box(W.w - 0.16, W.d / 2, 0, 0.32, W.d, W.h, '#3d3024');
-  box(0.16, W.d / 2, W.h, 0.42, W.d, 0.1, cap);
-  box(W.w - 0.16, W.d / 2, W.h, 0.42, W.d, 0.1, cap);
+  // 북벽 (뒤) — 두꺼운 크림 외벽
+  box(W.w / 2, 0.16, 0, W.w, 0.32, W.h, wall, { south: -0.02, northFace: -0.42 });
+  box(W.w / 2, 0.16, W.h, W.w, 0.52, 0.17, cap, { topShade: 0.26 });
+  // 서벽 / 동벽
+  box(0.16, W.d / 2, 0, 0.32, W.d, W.h, shade(wall, -0.03), { eastFace: -0.05, westFace: -0.42 });
+  box(W.w - 0.16, W.d / 2, 0, 0.32, W.d, W.h, shade(wall, -0.01), { westFace: -0.09, eastFace: -0.42 });
+  box(0.16, W.d / 2, W.h, 0.52, W.d, 0.17, cap, { topShade: 0.24 });
+  box(W.w - 0.16, W.d / 2, W.h, 0.52, W.d, 0.17, cap, { topShade: 0.24 });
+  // 벽면 음영 그라디언트 (아래는 따뜻하게, 위는 은은한 그늘)
+  q(depthOf(W.w / 2, 0.325, 1.4), () => quadGrad([[0.34, 0.325, 0], [W.w - 0.34, 0.325, 0], [W.w - 0.34, 0.325, W.h], [0.34, 0.325, W.h]], [[0, 'rgba(255,238,206,.32)'], [0.42, 'rgba(255,236,204,.03)'], [1, 'rgba(136,88,64,.20)']]));
+  q(depthOf(0.326, W.d / 2, 1.4), () => quadGrad([[0.326, 0.34, 0], [0.326, W.d - 0.34, 0], [0.326, W.d - 0.34, W.h], [0.326, 0.34, W.h]], [[0, 'rgba(255,238,206,.26)'], [0.42, 'rgba(255,236,204,.02)'], [1, 'rgba(136,88,64,.18)']]));
+  q(depthOf(W.w - 0.326, W.d / 2, 1.4), () => quadGrad([[W.w - 0.326, 0.34, 0], [W.w - 0.326, W.d - 0.34, 0], [W.w - 0.326, W.d - 0.34, W.h], [W.w - 0.326, 0.34, W.h]], [[0, 'rgba(255,238,206,.24)'], [0.42, 'rgba(255,236,204,.02)'], [1, 'rgba(136,88,64,.17)']]));
   // 앞쪽 낮은 턱 (돌하우스 컷)
-  box(3.65, 10.86, 0, 7.3, 0.24, 0.18, '#33281e');
-  box(12.35, 10.86, 0, 7.3, 0.24, 0.18, '#33281e');
-  // 출입구 프레임
-  box(7.3, 10.86, 0, 0.14, 0.26, 2.35, '#4a3828');
-  box(8.7, 10.86, 0, 0.14, 0.26, 2.35, '#4a3828');
-  box(8.0, 10.86, 2.35, 1.54, 0.26, 0.16, '#4a3828');
-  // 벽 상단 라인
-  poly([[0.3, 0.30, 2.55], [W.w - 0.3, 0.30, 2.55], [W.w - 0.3, 0.30, 2.62], [0.3, 0.30, 2.62]], 'rgba(246,214,168,.16)');
-  // 벽 아트
-  [[1.6, 2.4], [4.9, 2.0], [12.4, 2.2]].forEach(([x, w]) => {
-    box(x, 0.35, 1.55, w, 0.05, 0.9, '#241d16');
-    box(x, 0.37, 1.6, w - 0.16, 0.03, 0.8, '#3b3027');
+  box(3.65, 10.86, 0, 7.3, 0.24, 0.19, '#f3ddc6', { topShade: 0.28 });
+  box(12.35, 10.86, 0, 7.3, 0.24, 0.19, '#f3ddc6', { topShade: 0.28 });
+  // 출입구 아치 프레임
+  box(7.3, 10.86, 0, 0.1, 0.24, 2.24, '#f2d6bd');
+  box(8.7, 10.86, 0, 0.1, 0.24, 2.24, '#f2d6bd');
+  box(8.0, 10.86, 2.24, 1.5, 0.24, 0.12, '#f7e4d0');
+  // 걸레받이 (크림) + 은은한 하단 LED
+  const skirt = (x0, y0, x1, y1) => box((x0 + x1) / 2, (y0 + y1) / 2, 0, Math.abs(x1 - x0) || 0.04, Math.abs(y1 - y0) || 0.04, 0.1, '#fbeedd', { topShade: 0.34 });
+  skirt(0.32, 0.3, W.w - 0.32, 0.35);
+  skirt(0.3, 0.3, 0.35, W.d - 0.3);
+  skirt(W.w - 0.35, 0.3, W.w - 0.3, W.d - 0.3);
+  q(depthOf(W.w / 2, 0.36, 0.11), () => {
+    poly([[0.4, 0.345, 0.105], [W.w - 0.4, 0.345, 0.105], [W.w - 0.4, 0.345, 0.125], [0.4, 0.345, 0.125]], 'rgba(255,208,150,.9)');
+    const p = proj(W.w / 2, 0.36, 0.12);
+    if (p) drawGlow(p.x, p.y, 6.6 * p.s, '#ffb977', 0.05);
   });
-  // 스탠드 램프
-  [[0.75, 9.9], [15.1, 9.9]].forEach(([x, y]) => {
-    cyl(x, y, 0, 0.05, 1.55, '#2f2822', 8);
-    sphere(x, y, 1.62, 0.14, '#f6d9ae');
-    glowDisc(x, y, 1.3, '#ffd39a', 0.08);
+  // 벽 상단 코브 라이트
+  q(depthOf(W.w / 2, 0.34, 2.6), () => {
+    poly([[0.34, 0.335, 2.62], [W.w - 0.34, 0.335, 2.62], [W.w - 0.34, 0.335, 2.69], [0.34, 0.335, 2.69]], 'rgba(255,214,164,.55)');
+    const p = proj(W.w / 2, 0.34, 2.66);
+    if (p) drawGlow(p.x, p.y, 6 * p.s, '#ffd7a0', 0.035);
+  });
+  // 벽 액자 (크림 프레임 + 아기자기한 그림)
+  const frameN = (x, w, z0, h, tint) => {
+    q(depthOf(x, 0.34, z0 + h / 2) - 0.004, () => {
+      poly(vPanel(x - w / 2, z0, x + w / 2, z0 + h, 0.035, 0.33), '#fff6ea');
+      poly(vPanel(x - w / 2 + 0.045, z0 + 0.045, x + w / 2 - 0.045, z0 + h - 0.045, 0.02, 0.325), tint || '#dfeedd');
+      poly(vPanel(x - w / 2 + 0.045, z0 + 0.045, x + w / 2 - 0.045, z0 + h * 0.58, 0.02, 0.3235), 'rgba(255,236,196,.9)');
+      const sp = proj(x + w * 0.22, 0.32, z0 + h * 0.34);
+      if (sp) { ctx3.beginPath(); ctx3.arc(sp.x, sp.y, 0.055 * sp.s, 0, TAU); ctx3.fillStyle = '#f2b96f'; ctx3.fill(); }
+      const hp = proj(x - w * 0.14, 0.32, z0 + h * 0.3);
+      if (hp) { ctx3.beginPath(); ctx3.ellipse(hp.x, hp.y, 0.1 * hp.s, 0.055 * hp.s, 0, Math.PI, TAU); ctx3.fillStyle = '#9dc48c'; ctx3.fill(); }
+    });
+  };
+  frameN(1.55, 0.9, 1.5, 0.72, '#e4f0dc');
+  frameN(2.9, 0.62, 1.62, 0.54, '#fbe3d2');
+  frameN(4.85, 0.8, 1.52, 0.66, '#e0eaf4');
+  frameN(11.25, 0.5, 1.62, 0.44, '#fbe6d6');
+  frameN(14.55, 0.72, 1.5, 0.62, '#e6f0e2');
+  // 창문 (초록 바깥 풍경 + 크림 블라인드)
+  windowN(11.95, 13.55, 1.02, 2.32);
+  // 아치형 출입문 (동벽)
+  archDoorE(2.75, 3.7, 1.78);
+  // 벽등 (따뜻한 원형 조명)
+  [[1.4, 'n'], [3.9, 'n'], [5.15, 'n'], [10.45, 'n'], [14.85, 'n']].forEach(([x]) => sconce(x, 0.36, 2.16, 0, 1));
+  [[1.9, 'w'], [4.4, 'w'], [7.2, 'w'], [9.9, 'w']].forEach(([y]) => sconce(0.36, y, 2.16, 1, 0));
+  [[1.6, 'e'], [4.9, 'e'], [7.6, 'e'], [10.2, 'e']].forEach(([y]) => sconce(W.w - 0.36, y, 2.16, -1, 0));
+  // 벽면 워시
+  [1.4, 3.9, 5.15, 10.45, 14.85].forEach(x => wallWash(x, 0.36, 1.9, 1.1, 0.055, '#ffc98a'));
+  [1.9, 4.4, 7.2, 9.9].forEach(y => {
+    const p = proj(0.4, y, 1.9); if (!p) return;
+    q(depthOf(0.36, y, 1.6), () => {
+      const e = proj(0.4, y + 1.05, 1.9);
+      const R = e ? Math.max(4, Math.hypot(e.x - p.x, e.y - p.y)) : 30;
+      ctx3.save(); ctx3.globalCompositeOperation = 'lighter'; ctx3.globalAlpha = 0.09;
+      ctx3.translate(p.x, p.y); ctx3.scale(Math.max(0.45, R / 40), 1.35);
+      ctx3.drawImage(glowTex('#ffc98a'), -R * 0.9, -R * 0.9, R * 1.8, R * 1.8); ctx3.restore();
+    });
+  });
+  [1.6, 4.9, 7.6, 10.2].forEach(y => {
+    const p = proj(W.w - 0.4, y, 1.9); if (!p) return;
+    q(depthOf(W.w - 0.36, y, 1.6), () => {
+      const e = proj(W.w - 0.4, y + 1.05, 1.9);
+      const R = e ? Math.max(4, Math.hypot(e.x - p.x, e.y - p.y)) : 30;
+      ctx3.save(); ctx3.globalCompositeOperation = 'lighter'; ctx3.globalAlpha = 0.08;
+      ctx3.translate(p.x, p.y); ctx3.scale(Math.max(0.45, R / 40), 1.35);
+      ctx3.drawImage(glowTex('#ffc98a'), -R * 0.9, -R * 0.9, R * 1.8, R * 1.8); ctx3.restore();
+    });
   });
   plant3(7.15, 10.05, 0.62); plant3(10.35, 10.05, 0.62);
-  // 벽 워시 (부드러운 빛 웅덩이)
-  [1.4, 5.2, 8.0, 12.0, 14.6].forEach(x => {
-    const p = proj(x, 0.34, 2.2);
-    if (p) { q(depthOf(x, 0.34, 1.2), () => {
-      const g = ctx3.createRadialGradient(p.x, p.y, 2, p.x, p.y, 66);
-      g.addColorStop(0, 'rgba(255,196,132,.20)'); g.addColorStop(1, 'rgba(255,196,132,0)');
-      ctx3.save(); ctx3.globalCompositeOperation = 'lighter'; ctx3.fillStyle = g;
-      ctx3.beginPath(); ctx3.arc(p.x, p.y, 66, 0, TAU); ctx3.fill(); ctx3.restore();
-    }); }
+  plant3(5.5, 0.72, 0.5); plant3(10.25, 0.7, 0.46);
+  plant3(0.62, 5.05, 0.66); plant3(15.35, 7.3, 0.6); plant3(15.3, 9.6, 0.56);
+  floorLamp3(0.78, 10.15); floorLamp3(15.05, 10.15);
+}
+
+function sconce(x, y, z, dx, dy) {
+  q(depthOf(x, y, z) - 0.006, () => {
+    const p = proj(x, y, z); if (!p) return;
+    const R = 0.1 * p.s;
+    ctx3.save();
+    ctx3.beginPath(); ctx3.ellipse(p.x, p.y, R * 1.2, R * 1.5, 0, 0, TAU);
+    ctx3.fillStyle = '#fff7ec'; ctx3.fill();
+    const g = ctx3.createRadialGradient(p.x - R * 0.25, p.y - R * 0.3, 0.5, p.x, p.y, R * 1.05);
+    g.addColorStop(0, '#fffdf6'); g.addColorStop(0.5, '#ffedc9'); g.addColorStop(1, '#f0b878');
+    ctx3.beginPath(); ctx3.arc(p.x, p.y, R * 0.86, 0, TAU); ctx3.fillStyle = g; ctx3.fill();
+    ctx3.restore();
+    drawGlow(p.x, p.y, R * 4.4, '#ffcf94', 0.17);
+  });
+  glowDisc(x + dx * 0.25, y + dy * 0.25, 0.85, '#ffca8a', 0.035);
+}
+
+function windowN(x0, x1, z0, z1) {
+  const y = 0.33;
+  q(depthOf((x0 + x1) / 2, y, (z0 + z1) / 2) - 0.009, () => {
+    const a = proj(x0, y, z0), b = proj(x1, y, z0), c = proj(x1, y, z1), d = proj(x0, y, z1);
+    if (!a || !b || !c || !d) return;
+    ctx3.save();
+    ctx3.beginPath(); ctx3.moveTo(a.x, a.y); ctx3.lineTo(b.x, b.y); ctx3.lineTo(c.x, c.y); ctx3.lineTo(d.x, d.y); ctx3.closePath();
+    const g = ctx3.createLinearGradient(0, d.y, 0, a.y);
+    g.addColorStop(0, '#dff0e2'); g.addColorStop(0.45, '#c9e6c8'); g.addColorStop(1, '#a8d5a6');
+    ctx3.fillStyle = g; ctx3.fill(); ctx3.clip();
+    const W1 = b.x - a.x, H1 = a.y - d.y;
+    for (let i = 0; i < 6; i++) {
+      const cx = a.x + W1 * (0.12 + i * 0.15), cy = a.y - H1 * (0.18 + (i % 3) * 0.12);
+      ctx3.beginPath(); ctx3.arc(cx, cy, Math.abs(W1) * 0.11, 0, TAU);
+      ctx3.fillStyle = i % 2 ? 'rgba(120,178,120,.85)' : 'rgba(146,198,138,.85)'; ctx3.fill();
+    }
+    ctx3.fillStyle = 'rgba(255,246,203,.75)';
+    ctx3.beginPath(); ctx3.arc(a.x + W1 * 0.78, a.y - H1 * 0.72, Math.abs(W1) * 0.07, 0, TAU); ctx3.fill();
+    ctx3.restore();
+    // 블라인드 슬랫
+    for (let z = z0 + 0.05; z < z1 - 0.03; z += 0.105) {
+      poly([[x0 + 0.02, y - 0.006, z], [x1 - 0.02, y - 0.006, z], [x1 - 0.02, y - 0.006, z + 0.05], [x0 + 0.02, y - 0.006, z + 0.05]], 'rgba(255,248,238,.55)');
+    }
+    // 창틀
+    poly(vPanel(x0, z0, x1, z1, 0.02, y - 0.02), null, '#fff8ee', 5);
+    poly(vPanel(x0 + 0.03, z0 + 0.03, x1 - 0.03, z1 - 0.03, 0.02, y - 0.021), null, 'rgba(255,255,255,.55)', 1.2);
+    poly([[x0 - 0.05, y - 0.07, z1 - 0.05], [x1 + 0.05, y - 0.07, z1 - 0.05], [x1 + 0.05, y, z1 - 0.05], [x0 - 0.05, y, z1 - 0.05]], '#fdf4e7');
+    poly([[x0 - 0.05, y - 0.06, z0 - 0.02], [x1 + 0.05, y - 0.06, z0 - 0.02], [x1 + 0.05, y, z0 - 0.02], [x0 - 0.05, y, z0 - 0.02]], '#fdf4e7');
+    // 중간 창살
+    poly([[lerp(x0, x1, 0.5) - 0.02, y - 0.02, z0], [lerp(x0, x1, 0.5) + 0.02, y - 0.02, z0], [lerp(x0, x1, 0.5) + 0.02, y - 0.02, z1], [lerp(x0, x1, 0.5) - 0.02, y - 0.02, z1]], '#fff8ee');
+    const cp = proj((x0 + x1) / 2, y, (z0 + z1) / 2);
+    if (cp) drawGlow(cp.x, cp.y, 1.5 * cp.s, '#eef7cf', 0.16);
+  });
+  // 창턱 + 작은 화분
+  box((x0 + x1) / 2, 0.42, z0 - 0.03, x1 - x0 + 0.2, 0.26, 0.06, '#fdf4e7', { topShade: 0.3 });
+  cyl(x1 - 0.22, 0.42, z0 + 0.02, 0.075, 0.1, '#e8b08a', 10);
+  sphere(x1 - 0.22, 0.42, z0 + 0.2, 0.1, '#7dba74');
+}
+
+function archDoorE(y0, y1, zTop) {
+  const x = W.w - 0.33, cy = (y0 + y1) / 2, r = (y1 - y0) / 2;
+  const pts = [[x, y0, 0], [x, y0, zTop]];
+  for (let i = 1; i <= 14; i++) { const a = Math.PI - i / 14 * Math.PI; pts.push([x, cy + Math.cos(a) * r, zTop + Math.sin(a) * r]); }
+  pts.push([x, y1, 0]);
+  q(depthOf(x, cy, 1.0) - 0.005, () => {
+    poly(pts, '#f0c8ad');
+    poly(pts.map(p => [p[0] - 0.002, p[1], p[2]]), null, '#fff3e3', 4);
+    const inner = [[x - 0.004, y0 + 0.09, 0.0], [x - 0.004, y0 + 0.09, zTop - 0.06]];
+    for (let i = 1; i <= 12; i++) { const a = Math.PI - i / 12 * Math.PI; inner.push([x - 0.004, cy + Math.cos(a) * (r - 0.09), zTop - 0.06 + Math.sin(a) * (r - 0.09)]); }
+    inner.push([x - 0.004, y1 - 0.09, 0.0]);
+    poly(inner, null, 'rgba(255,247,235,.85)', 1.6);
+    // 손잡이
+    const hp = proj(x - 0.01, y1 - 0.16, 1.0);
+    if (hp) { ctx3.beginPath(); ctx3.arc(hp.x, hp.y, Math.max(1.6, 0.045 * hp.s), 0, TAU); ctx3.fillStyle = '#f7e0c4'; ctx3.fill(); ctx3.strokeStyle = 'rgba(190,146,102,.8)'; ctx3.lineWidth = 1; ctx3.stroke(); }
   });
 }
 
 /* ---------------- command deck ---------------- */
 function drawCommand3() {
   const C = CMD_DESK;
-  box(C.x, C.y, 0.08, C.w, C.d, 0.07, MAT.deskBody);
-  box(C.x, C.y, 0.7, C.w + 0.12, C.d + 0.1, 0.08, MAT.deskTop, { topShade: 0.26 });
-  box(C.x, C.y + 0.02, 0.15, C.w - 0.2, C.d - 0.14, 0.55, '#3d2c1e');
-  // 모니터 3대
+  softShadow(C.x, C.y + 0.08, 1.85, 0.95, 0.45);
+  // 받침
+  box(C.x, C.y, 0.06, C.w + 0.24, C.d + 0.24, 0.04, '#f6e7d5');
+  // 크림 책상 + 둥근 모서리
+  box(C.x, C.y, 0.1, C.w - 0.06, C.d - 0.06, 0.56, '#ecd3b2', { topShade: 0.2 });
+  box(C.x, C.y + 0.02, 0.1, 0.06, C.d - 0.1, 0.56, '#f8ecd9');
+  roundTop(C.x, C.y, 0.68, C.w + 0.1, C.d + 0.08, 0.16, MAT.deskTop, 0.2, 0.32);
+  box(C.x, C.y, 0.63, C.w + 0.02, C.d + 0.02, 0.06, '#eed7b8');
+  // 모니터 3대 (블루 스크린 + 크림 베젤)
   [-0.86, 0, 0.86].forEach((dx, i) => {
-    const mx = C.x + dx, my = C.y - 0.14;
-    box(mx, my, 0.78, 0.26, 0.14, 0.03, MAT.metal);
-    box(mx, my, 0.81, 0.06, 0.06, 0.18, MAT.metal);
-    const z0 = 0.99, h = 0.52, w = 0.9;
-    box(mx, my, z0, w, 0.04, h, MAT.screenFrame);
-    const bl = [mx - w / 2 + 0.03, my + 0.024, z0 + 0.03], br = [mx + w / 2 - 0.03, my + 0.024, z0 + 0.03];
-    const tr = [mx + w / 2 - 0.03, my + 0.024, z0 + h - 0.03], tl = [mx - w / 2 + 0.03, my + 0.024, z0 + h - 0.03];
-    q(depthOf(mx, my, z0 + h / 2) - 0.001, () => {
-      poly([bl, br, tr, tl], '#0a141d');
-      for (let k = 0; k < 4; k++) {
-        const v = 0.18 + k * 0.2;
-        const a = bilerp(bl, br, tr, tl, 0.08, v), b = bilerp(bl, br, tr, tl, 0.1 + 0.3 + 0.18 * Math.abs(Math.sin(S.time * 1.1 + k + i)), v);
-        poly([a, b, [b[0], b[1], b[2] + 0.03], [a[0], a[1], a[2] + 0.03]], 'rgba(110,205,255,.55)');
+    const mx = C.x + dx, my = C.y - 0.16;
+    box(mx, my, 0.72, 0.22, 0.12, 0.03, '#e9d3b6');
+    box(mx, my, 0.75, 0.05, 0.05, 0.16, '#e9d3b6');
+    const z0 = 0.91, h = 0.5, w = 0.88;
+    box(mx, my, z0, w, 0.035, h, '#fdf4e7');
+    q(depthOf(mx, my, z0 + h / 2) - 0.002, () => {
+      const bl = [mx - w / 2 + 0.035, my + 0.022, z0 + 0.035], br = [mx + w / 2 - 0.035, my + 0.022, z0 + 0.035];
+      const tr = [mx + w / 2 - 0.035, my + 0.022, z0 + h - 0.03], tl = [mx - w / 2 + 0.035, my + 0.022, z0 + h - 0.03];
+      poly([bl, br, tr, tl], '#3b7ed6');
+      poly([[bl[0], bl[1], bl[2] + 0.14], [br[0], br[1], br[2] + 0.14], [br[0], br[1], br[2] + 0.2], [bl[0], bl[1], bl[2] + 0.2]], 'rgba(255,255,255,.22)');
+      for (let k = 0; k < 3; k++) {
+        const v = 0.72 + k * 0.075;
+        const a = bilerp(bl, br, tr, tl, 0.1, v), b = bilerp(bl, br, tr, tl, 0.32 + 0.42 * Math.abs(Math.sin(S.time * 1.1 + k + i)), v);
+        poly([a, b, [b[0], b[1], b[2] + 0.022], [a[0], a[1], a[2] + 0.022]], 'rgba(230,244,255,.55)');
       }
+      botGlyph(mx, my + 0.025, z0 + h * 0.5, 0.12, 'rgba(255,255,255,.92)', 'rgba(22,58,110,.95)');
       const c = proj(mx, my + 0.03, z0 + h / 2);
-      if (c) drawGlow(c.x, c.y, 0.62 * c.s, '#6ec8ff', 0.22);
+      if (c) drawGlow(c.x, c.y, 0.55 * c.s, '#6fb6ff', 0.26);
     });
   });
-  cyl(C.x - 1.2, C.y + 0.14, 0.78, 0.055, 0.1, '#e2d6c2', 10);
-  box(C.x + 1.2, C.y + 0.12, 0.78, 0.26, 0.18, 0.025, '#eadcc6');
-  chair3(SEATS.command[0], '#7a6248', 1.1);
+  cyl(C.x - 1.16, C.y + 0.16, 0.72, 0.052, 0.1, '#fdf4e7', 10);
+  box(C.x + 1.16, C.y + 0.14, 0.72, 0.26, 0.18, 0.03, '#fdf4e7');
+  // 작은 화분
+  cyl(C.x + 1.44, C.y - 0.02, 0.72, 0.06, 0.08, '#e8b08a', 10);
+  sphere(C.x + 1.44, C.y - 0.02, 0.84, 0.09, '#7dba74');
+  chair3(SEATS.command[0], '#f8ece0', 1.08);
+  // 서류 캐비닛
+  roundSlab(9.62, 1.1, 0.06, 0.66, 0.5, 0.86, 0.06, '#f6e6d3');
 
-  // 벽면 대형 스크린
-  const x0 = 6.45, x1 = 10.05, z0 = 1.12, z1 = 2.52, y = 0.36;
-  const corner = [[x0, y + 0.08, z0], [x1, y + 0.08, z0], [x1, y + 0.08, z1], [x0, y + 0.08, z1]];
-  box((x0 + x1) / 2, y + 0.02, z0 - 0.06, x1 - x0 + 0.14, 0.05, z1 - z0 + 0.12, '#1a1611');
-  q(depthOf((x0 + x1) / 2, y + 0.09, (z0 + z1) / 2) - 0.002, () => {
-    poly(corner, '#081420');
-    for (let i = 0; i < 6; i++) {
-      const v = 0.12 + i * 0.13;
-      const a = bilerp(corner[0], corner[1], corner[2], corner[3], 0.03, v);
-      const b = bilerp(corner[0], corner[1], corner[2], corner[3], 0.06 + 0.3 + 0.35 * Math.abs(Math.sin(S.time * 0.6 + i * 1.4)), v);
-      poly([a, b, [b[0], b[1], b[2] + 0.03], [a[0], a[1], a[2] + 0.03]], 'rgba(96,196,255,.32)');
+  /* --- 벽면: 아치 LED + 간판 + 대형 블루 스크린 --- */
+  const y = 0.335;
+  const sx0 = 6.95, sx1 = 9.55, sz0 = 1.0, sz1 = 1.94;
+  // 아치 LED (간판+화면을 감싸는 따뜻한 조명)
+  q(depthOf(8.25, y, 1.6) - 0.02, () => archLedPath(6.72, 9.78, y - 0.004, 0.9, 2.6, '#ffb468'));
+  // 간판 텍스트
+  q(depthOf(8.25, y, 2.24) - 0.016, () => {
+    botGlyph(7.16, y - 0.008, 2.24, 0.155, '#4a3629', '#f6e3d0');
+    panelText([[7.34, y - 0.006, 2.03], [9.62, y - 0.006, 2.03], [9.62, y - 0.006, 2.47], [7.34, y - 0.006, 2.47]], 0, 0, 1, 1, 'AI 비서 오피스', 0.34, '#4a3629', 800, 'left');
+    panelText([[7.36, y - 0.006, 1.9], [9.4, y - 0.006, 1.9], [9.4, y - 0.006, 2.02], [7.36, y - 0.006, 2.02]], 0, 0, 1, 1, 'AI Assistant Office', 0.115, 'rgba(122,96,76,.85)', 700, 'left');
+  });
+  // 스크린 프레임 + 화면
+  q(depthOf((sx0 + sx1) / 2, y, (sz0 + sz1) / 2) - 0.012, () => {
+    poly(vPanel(sx0 - 0.08, sz0 - 0.08, sx1 + 0.08, sz1 + 0.08, 0.2, y - 0.002), '#fff7ec');
+    const a = proj(sx0, y - 0.004, sz0), b = proj(sx1, y - 0.004, sz0), c = proj(sx1, y - 0.004, sz1), d = proj(sx0, y - 0.004, sz1);
+    if (a && b && c && d) {
+      ctx3.save();
+      ctx3.beginPath(); ctx3.moveTo(a.x, a.y); ctx3.lineTo(b.x, b.y); ctx3.lineTo(c.x, c.y); ctx3.lineTo(d.x, d.y); ctx3.closePath();
+      const g = ctx3.createLinearGradient(0, d.y, 0, a.y);
+      g.addColorStop(0, '#6fb2ee'); g.addColorStop(1, '#3a78cf');
+      ctx3.fillStyle = g; ctx3.fill();
+      ctx3.clip();
+      for (let i = 0; i < 4; i++) {
+        const v = 0.62 + i * 0.09;
+        const p1 = bilerp([sx0, y, sz0], [sx1, y, sz0], [sx1, y, sz1], [sx0, y, sz1], 0.06, v);
+        const p2 = bilerp([sx0, y, sz0], [sx1, y, sz0], [sx1, y, sz1], [sx0, y, sz1], 0.12 + 0.2 + 0.3 * Math.abs(Math.sin(S.time * 0.7 + i * 1.3)), v);
+        const s1 = proj(p1[0], p1[1], p1[2]), s2 = proj(p2[0], p2[1], p2[2]);
+        if (s1 && s2) { ctx3.beginPath(); ctx3.moveTo(s1.x, s1.y); ctx3.lineTo(s2.x, s2.y); ctx3.strokeStyle = 'rgba(226,242,255,.55)'; ctx3.lineWidth = Math.max(1, 0.016 * s1.s); ctx3.lineCap = 'round'; ctx3.stroke(); }
+      }
+      ctx3.restore();
     }
-    panelText(corner, 0.04, 0.6, 0.72, 0.95, 'AI OFFICE · HQ', 0.46, 'rgba(246,214,168,.96)', 800);
-    panelText(corner, 0.04, 0.1, 0.62, 0.34, 'MY AGENTS · OPS', 0.2, 'rgba(140,196,228,.85)', 700);
-    panelText(corner, 0.7, 0.62, 0.97, 0.9, '10 ONLINE', 0.2, 'rgba(121,211,162,.95)', 800, 'right');
-    const c = proj((x0 + x1) / 2, y + 0.09, (z0 + z1) / 2);
-    if (c) drawGlow(c.x, c.y, 2.6 * c.s, '#50aaeb', 0.13);
+    botGlyph((sx0 + sx1) / 2, y - 0.006, (sz0 + sz1) / 2 + 0.04, 0.2, 'rgba(255,255,255,.95)', 'rgba(32,74,140,.95)');
+    panelText([[sx0, y - 0.006, sz0], [sx1, y - 0.006, sz0], [sx1, y - 0.006, sz1], [sx0, y - 0.006, sz1]], 0.06, 0.06, 0.94, 0.26, '오늘도 함께 일해요', 0.13, 'rgba(255,255,255,.92)', 700, 'center');
+    const cp = proj((sx0 + sx1) / 2, y - 0.01, (sz0 + sz1) / 2);
+    if (cp) drawGlow(cp.x, cp.y, 2.4 * cp.s, '#5aa6f0', 0.15);
   });
 }
 
-function chair3(seat, col = '#6b5745', scale = 1) {
+function archLedPath(x0, x1, y, zBase, zApex, col) {
+  const cx = (x0 + x1) / 2, r = (x1 - x0) / 2, zTop = zApex - r;
+  const pts = [[x0, y, zBase], [x0, y, zTop]];
+  for (let i = 1; i <= 18; i++) { const a = Math.PI - i / 18 * Math.PI; pts.push([cx + Math.cos(a) * r, y, zTop + Math.sin(a) * r]); }
+  pts.push([x1, y, zBase]);
+  const pp = pts.map(p => proj(p[0], p[1], p[2])).filter(Boolean);
+  if (pp.length < 3) return;
+  const s = pp[0].s || 40;
+  ctx3.save();
+  ctx3.beginPath(); ctx3.moveTo(pp[0].x, pp[0].y);
+  for (let i = 1; i < pp.length; i++) ctx3.lineTo(pp[i].x, pp[i].y);
+  ctx3.lineCap = 'round'; ctx3.lineJoin = 'round';
+  ctx3.shadowColor = '#ffa95e'; ctx3.shadowBlur = Math.max(9, 0.26 * s);
+  ctx3.strokeStyle = 'rgba(255,244,222,.98)'; ctx3.lineWidth = Math.max(1.8, 0.04 * s); ctx3.stroke();
+  ctx3.shadowBlur = 0; ctx3.globalAlpha = 0.5; ctx3.strokeStyle = col; ctx3.lineWidth = Math.max(3.5, 0.13 * s); ctx3.stroke();
+  ctx3.restore();
+}
+
+function chair3(seat, col = '#f8ece0', scale = 1) {
   const { x, y, facing } = seat;
   const c = Math.cos(facing), s = Math.sin(facing);
-  const bx = x - c * 0.22 * scale, by = y - s * 0.22 * scale;
-  // 다리 4개
-  [[-0.16, -0.16], [0.16, -0.16], [-0.16, 0.16], [0.16, 0.16]].forEach(([ox, oy]) => {
-    const rx = ox * c - oy * s, ry = ox * s + oy * c;
-    box(x + rx * scale, y + ry * scale, 0, 0.045, 0.045, 0.4, '#2e2721');
+  const bx = x - c * 0.23 * scale, by = y - s * 0.23 * scale;
+  // 다크 5발 베이스 + 기둥
+  cyl(x, y, 0.0, 0.19 * scale, 0.03, '#6b5a4c', 12);
+  [0.4, 0.9, 1.4, 1.9, 2.4].forEach((a, i) => {
+    const ang = facing + Math.PI / 2 + i / 5 * TAU;
+    box(x + Math.cos(ang) * 0.1 * scale, y + Math.sin(ang) * 0.1 * scale, 0.02, 0.2 * scale, 0.05 * scale, 0.035, '#6b5a4c');
   });
-  // 좌판 + 쿠션
-  box(x, y, 0.4, 0.46, 0.46, 0.06, col, { topShade: 0.3 });
-  box(x, y, 0.46, 0.4, 0.4, 0.05, shade(col, 0.16), { topShade: 0.34 });
-  // 등받이
-  box(bx, by, 0.5, 0.46, 0.07, 0.4, shade(col, -0.16), { topShade: 0.22 });
+  cyl(x, y, 0.03, 0.03 * scale, 0.34, '#8a7767', 8);
+  // 좌판 (둥근 쿠션)
+  q(depthOf(x, y, 0.4) + 0.002, () => {
+    ovalSide(x, y, 0.35, 0.44, 0.25 * scale, 0.25 * scale, shade(col, -0.1));
+    ovalTop(x, y, 0.44, 0.245 * scale, 0.24 * scale, col, 0.2, 20);
+    ovalTop(x, y, 0.445, 0.17 * scale, 0.17 * scale, shade(col, 0.32), 0.1, 16);
+  });
+  // 등받이 (둥근 사각 패널, 크림 그라디언트)
+  q(depthOf(bx, by, 0.64) + 0.004, () => {
+    const p1 = proj(bx, by, 0.42), p2 = proj(bx, by, 0.86);
+    if (!p1 || !p2) return;
+    const w = 0.4 * scale * p1.s, h = Math.abs(p1.y - p2.y) * 0.92;
+    const rx = p1.x - w / 2, ry = Math.min(p1.y, p2.y), rr = Math.min(w, h) * 0.34;
+    ctx3.save();
+    ctx3.beginPath(); roundRect(ctx3, rx, ry, w, h, rr);
+    const g = ctx3.createLinearGradient(0, ry, 0, ry + h);
+    g.addColorStop(0, shade(col, 0.28)); g.addColorStop(0.55, shade(col, 0.02)); g.addColorStop(1, shade(col, -0.18));
+    ctx3.fillStyle = g; ctx3.fill();
+    ctx3.strokeStyle = 'rgba(255,255,255,.7)'; ctx3.lineWidth = 1; ctx3.stroke();
+    ctx3.restore();
+  });
 }
 
 /* ---------------- meeting room ---------------- */
@@ -1736,59 +2034,74 @@ function drawMeeting3() {
   glassWall(5.99, 3.15, 5.99, 4.45);
   glassWall(0.35, 4.4, 4.55, 4.4);
   glassWall(5.45, 4.4, 5.99, 4.4);
-  // 테이블
-  box(TABLE.x, TABLE.y, TABLE.h - 0.1, TABLE.w, TABLE.d, 0.1, '#7a5634', { topShade: 0.26 });
-  box(TABLE.x, TABLE.y, TABLE.h - 0.16, TABLE.w - 0.2, TABLE.d - 0.2, 0.06, '#452f1e');
-  [-1.25, 1.25].forEach(dx => box(TABLE.x + dx, TABLE.y, 0, 0.24, TABLE.d - 0.12, TABLE.h - 0.16, '#3a2818'));
-  SEATS.meeting.forEach(s => chair3(s, '#66513c', 0.98));
-  hologram3(TABLE.x, TABLE.y, TABLE.h);
-  // 화이트보드
+  // 둥근 크림 테이블
+  softShadow(TABLE.x, TABLE.y, 1.9, 1.0, 0.42);
+  cyl(TABLE.x, TABLE.y, 0.02, 0.42, 0.06, '#e5c39d', 18);
+  cyl(TABLE.x, TABLE.y, 0.06, 0.18, 0.56, '#e3bf99', 14);
+  q(depthOf(TABLE.x, TABLE.y, 0.69) - 0.002, () => {
+    ovalSide(TABLE.x, TABLE.y, 0.56, 0.66, 1.52, 0.62, '#dfba91');
+    ovalTop(TABLE.x, TABLE.y, 0.66, 1.52, 0.62, '#e0b17c', 0.16, 36);
+    ovalTop(TABLE.x, TABLE.y, 0.665, 1.4, 0.52, '#ecc79c', 0.1, 36);
+  });
+  box(TABLE.x - 0.52, TABLE.y + 0.06, 0.66, 0.36, 0.26, 0.02, '#e7d3bb');
+  box(TABLE.x - 0.52, TABLE.y - 0.04, 0.68, 0.34, 0.02, 0.2, '#fdf4e7');
+  box(TABLE.x - 0.52, TABLE.y - 0.05, 0.7, 0.3, 0.014, 0.16, '#4b8ed8');
+  cyl(TABLE.x + 0.3, TABLE.y + 0.02, 0.66, 0.045, 0.085, '#fdf4e7', 10);
+  cyl(TABLE.x + 0.48, TABLE.y - 0.06, 0.66, 0.042, 0.075, '#f6d9c8', 10);
+  cyl(TABLE.x + 0.92, TABLE.y + 0.06, 0.66, 0.07, 0.09, '#e8b08a', 10);
+  sphere(TABLE.x + 0.92, TABLE.y + 0.06, 0.79, 0.1, '#7dba74');
+  box(TABLE.x + 0.7, TABLE.y - 0.12, 0.66, 0.16, 0.2, 0.03, '#f2e3cf');
+  SEATS.meeting.forEach(s => chair3(s, '#f8ece0', 0.94));
+  hologram3(TABLE.x, TABLE.y, 0.74);
+  // 화이트보드 → 크림 보드 + 포스트잇
   const wb = [[0.36, 1.05, 1.02], [0.36, 3.35, 1.02], [0.36, 3.35, 1.95], [0.36, 1.05, 1.95]];
   q(depthOf(0.4, 2.2, 1.5), () => {
-    poly(wb, '#cfc8b8');
-    poly([[0.37, 1.15, 1.12], [0.37, 2.15, 1.12], [0.37, 2.15, 1.16], [0.37, 1.15, 1.16]], 'rgba(70,110,150,.6)');
-    poly([[0.37, 1.15, 1.28], [0.37, 2.65, 1.28], [0.37, 2.65, 1.32], [0.37, 1.15, 1.32]], 'rgba(60,90,120,.35)');
-    poly([[0.37, 1.6, 1.45], [0.37, 2.95, 1.45], [0.37, 2.95, 1.49], [0.37, 1.6, 1.49]], 'rgba(60,90,120,.3)');
-    panelText([[0.36, 1.05, 1.02], [0.36, 3.35, 1.02], [0.36, 3.35, 1.95], [0.36, 1.05, 1.95]], 0.06, 0.78, 0.75, 0.95, 'Q4 ROADMAP', 0.22, 'rgba(45,58,72,.85)', 800);
+    poly(wb, '#fff8ee');
+    poly([[0.362, 1.1, 1.07], [0.362, 3.3, 1.07], [0.362, 3.3, 1.13], [0.362, 1.1, 1.13]], 'rgba(226,178,128,.55)');
+    [[1.25, 1.5, '#f6d9a8'], [1.6, 1.15, '#bfe0c4'], [2.0, 1.62, '#f7c6c0'], [2.4, 1.2, '#c6d9f2'], [2.75, 1.55, '#f3e0a6']].forEach(([yy, zz, cc]) => {
+      poly([[0.355, yy, zz], [0.355, yy + 0.2, zz], [0.355, yy + 0.2, zz + 0.18], [0.355, yy, zz + 0.18]], cc);
+    });
+    poly([[0.355, 1.2, 1.42], [0.355, 2.1, 1.42], [0.355, 2.1, 1.45], [0.355, 1.2, 1.45]], 'rgba(120,150,180,.6)');
+    poly([[0.355, 1.35, 1.55], [0.355, 2.6, 1.55], [0.355, 2.6, 1.58], [0.355, 1.35, 1.58]], 'rgba(120,150,180,.4)');
+    poly(wb, null, '#fdf1e0', 4);
   });
   plant3(0.68, 0.68, 0.6);
   plant3(5.6, 0.74, 0.52);
-  pendant3(3.2, 2.35, 2.25, 0.42, 'rgba(255,214,160,.95)');
+  pendant3(3.2, 2.35, 2.25, 0.42, 'rgba(255,226,180,.95)');
 }
 
 function glassWall(x0, y0, x1, y1) {
-  const h = 1.35;
+  const h = 1.4;
   GLASS.push({ d: depthOf((x0 + x1) / 2, (y0 + y1) / 2, h / 2), fn: () => {
     const a = [x0, y0, 0.03], b = [x1, y1, 0.03], c = [x1, y1, h], d = [x0, y0, h];
-    poly([a, b, c, d], 'rgba(150,205,225,.10)');
-    // 반사 띠
-    poly([[lerp(x0, x1, .12), lerp(y0, y1, .12), .15], [lerp(x0, x1, .3), lerp(y0, y1, .3), .15], [lerp(x0, x1, .3), lerp(y0, y1, .3), h - .15], [lerp(x0, x1, .12), lerp(y0, y1, .12), h - .15]], 'rgba(220,245,255,.055)');
+    poly([a, b, c, d], 'rgba(214,240,232,.16)');
+    poly([[lerp(x0, x1, .1), lerp(y0, y1, .1), .16], [lerp(x0, x1, .28), lerp(y0, y1, .28), .16], [lerp(x0, x1, .28), lerp(y0, y1, .28), h - .16], [lerp(x0, x1, .1), lerp(y0, y1, .1), h - .16]], 'rgba(255,255,255,.10)');
     const p1 = proj(a[0], a[1], a[2]), p2 = proj(b[0], b[1], b[2]), p3 = proj(b[0], b[1], h), p4 = proj(a[0], a[1], h);
     if (p1 && p2 && p3 && p4) {
       ctx3.beginPath(); ctx3.moveTo(p1.x, p1.y); ctx3.lineTo(p2.x, p2.y); ctx3.lineTo(p3.x, p3.y); ctx3.lineTo(p4.x, p4.y); ctx3.closePath();
-      ctx3.strokeStyle = 'rgba(200,232,245,.38)'; ctx3.lineWidth = 1.1; ctx3.stroke();
+      ctx3.strokeStyle = 'rgba(255,250,240,.55)'; ctx3.lineWidth = 1.2; ctx3.stroke();
     }
-    poly([[x0, y0, h], [x1, y1, h], [x1, y1, h + 0.05], [x0, y0, h + 0.05]], 'rgba(210,228,238,.55)');
+    poly([[x0, y0, h], [x1, y1, h], [x1, y1, h + 0.05], [x0, y0, h + 0.05]], 'rgba(255,247,236,.85)');
   } });
   const len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(2, Math.round(len / 1.3));
   for (let i = 0; i <= n; i++) {
     const t = i / n, x = lerp(x0, x1, t), y = lerp(y0, y1, t);
-    box(x, y, 0, 0.06, 0.06, h + 0.04, '#93a0a6');
+    box(x, y, 0, 0.07, 0.07, h + 0.04, '#f7e7d4');
   }
 }
 
 function hologram3(cx, cy, cz) {
   q(depthOf(cx, cy, cz + 0.35), () => {
     ctx3.save(); ctx3.globalCompositeOperation = 'lighter';
-    const top = cz + 0.78;
-    const a = proj(cx - 0.34, cy - 0.3, cz), b = proj(cx + 0.34, cy - 0.3, cz), c = proj(cx + 0.26, cy - 0.24, top), d = proj(cx - 0.26, cy - 0.24, top);
+    const top = cz + 0.62;
+    const a = proj(cx - 0.3, cy - 0.26, cz), b = proj(cx + 0.3, cy - 0.26, cz), c = proj(cx + 0.23, cy - 0.2, top), d = proj(cx - 0.23, cy - 0.2, top);
     if (a && b && c && d) {
       const g = ctx3.createLinearGradient(0, a.y, 0, c.y);
-      g.addColorStop(0, 'rgba(120,225,255,.32)'); g.addColorStop(1, 'rgba(120,225,255,0)');
+      g.addColorStop(0, 'rgba(140,225,255,.28)'); g.addColorStop(1, 'rgba(140,225,255,0)');
       ctx3.fillStyle = g; ctx3.beginPath(); ctx3.moveTo(a.x, a.y); ctx3.lineTo(b.x, b.y); ctx3.lineTo(c.x, c.y); ctx3.lineTo(d.x, d.y); ctx3.closePath(); ctx3.fill();
     }
     for (let i = 0; i < 3; i++) {
-      const r = 0.7 - i * 0.15, zz = cz + 0.12 + i * 0.2, ph = S.time * (0.9 + i * 0.35) + i;
+      const r = 0.62 - i * 0.14, zz = cz + 0.1 + i * 0.19, ph = S.time * (0.9 + i * 0.35) + i;
       const pts = [];
       for (let k = 0; k <= 26; k++) {
         const ang = k / 26 * TAU;
@@ -1798,25 +2111,12 @@ function hologram3(cx, cy, cz) {
       if (pts.length > 2) {
         ctx3.beginPath(); ctx3.moveTo(pts[0].x, pts[0].y);
         pts.forEach(p => ctx3.lineTo(p.x, p.y));
-        ctx3.strokeStyle = i === 0 ? 'rgba(130,235,255,.85)' : 'rgba(150,205,255,.42)';
-        ctx3.lineWidth = i === 0 ? 1.9 : 1.1; ctx3.stroke();
+        ctx3.strokeStyle = i === 0 ? 'rgba(150,238,255,.85)' : 'rgba(170,215,255,.4)';
+        ctx3.lineWidth = i === 0 ? 1.8 : 1.1; ctx3.stroke();
       }
     }
-    for (let i = 0; i < 3; i++) {
-      const ang = S.time * 0.55 + i * TAU / 3;
-      const px = cx + Math.cos(ang) * 0.5, py = cy + Math.sin(ang) * 0.5;
-      const zz = cz + 0.42 + Math.sin(S.time * 1.3 + i) * 0.05;
-      const s = proj(px, py, zz);
-      if (s) {
-        const w = 30 * s.s / 55, h = 18 * s.s / 55;
-        ctx3.fillStyle = 'rgba(120,225,255,.22)';
-        ctx3.fillRect(s.x - w / 2, s.y - h / 2, w, h);
-        ctx3.strokeStyle = 'rgba(160,240,255,.6)'; ctx3.lineWidth = 1;
-        ctx3.strokeRect(s.x - w / 2, s.y - h / 2, w, h);
-      }
-    }
-    const cp = proj(cx, cy, cz + 0.35);
-    if (cp) drawGlow(cp.x, cp.y, 0.8 * cp.s, '#8cebff', 0.4);
+    const cp = proj(cx, cy, cz + 0.3);
+    if (cp) drawGlow(cp.x, cp.y, 0.7 * cp.s, '#8cebff', 0.34);
     ctx3.restore();
   });
 }
@@ -1828,107 +2128,288 @@ function drawDesks3() {
     const ag = seat && seat.by ? S.agents.find(a => a.id === seat.by) : null;
     const working = ag && ag.enabled && ag.state === 'work';
     const col = ag ? ag.color : '#6f9fd8';
-    // legs
-    [[-0.8, -0.29], [0.8, -0.29], [-0.8, 0.29], [0.8, 0.29]].forEach(o => box(d.x + o[0], d.y + o[1], 0, 0.06, 0.06, 0.68, '#33251a'));
-    // top
-    box(d.x, d.y, 0.68, d.w, d.d, 0.06, MAT.deskTop, { topShade: 0.28 });
-    box(d.x, d.y, 0.74, d.w - 0.08, d.d - 0.08, 0.015, '#8b613a');
-    // monitor (책상 북측, 화면은 남쪽=카메라 쪽)
-    const mx = d.x, my = d.y - 0.16;
-    box(mx, my, 0.755, 0.24, 0.13, 0.03, MAT.metal);
-    box(mx, my, 0.78, 0.05, 0.05, 0.16, MAT.metal);
-    const z0 = 0.94, h = 0.44, w = 0.84;
-    box(mx, my, z0, w, 0.035, h, MAT.screenFrame);
-    const bl = [mx - w / 2 + 0.025, my + 0.021, z0 + 0.025], br = [mx + w / 2 - 0.025, my + 0.021, z0 + 0.025];
-    const tr = [mx + w / 2 - 0.025, my + 0.021, z0 + h - 0.025], tl = [mx - w / 2 + 0.025, my + 0.021, z0 + h - 0.025];
+    softShadow(d.x, d.y + 0.05, 1.05, 0.62, 0.42);
+    // 가는 원목 다리
+    [[-0.72, -0.26], [0.72, -0.26], [-0.72, 0.26], [0.72, 0.26]].forEach(o => cyl(d.x + o[0], d.y + o[1], 0, 0.028, 0.67, '#e3c4a2', 8));
+    // 서랍장
+    q(depthOf(d.x + 0.52, d.y, 0.35), () => {
+      box(d.x + 0.52, d.y + 0.02, 0, 0.32, 0.5, 0.6, '#f6e2c8', { topShade: 0.16, eastFace: -0.24, northFace: -0.44 });
+      poly(vPanel(d.x + 0.37, 0.15, d.x + 0.67, 0.22, 0.015, d.y + 0.28), 'rgba(206,172,132,.9)');
+      poly(vPanel(d.x + 0.37, 0.35, d.x + 0.67, 0.42, 0.015, d.y + 0.28), 'rgba(206,172,132,.9)');
+      poly(vPanel(d.x + 0.44, 0.27, d.x + 0.6, 0.3, 0.01, d.y + 0.28), 'rgba(190,152,110,.8)');
+    });
+    // 상판 (둥근 모서리 · 밝은 자작나무)
+    q(depthOf(d.x, d.y, 0.7) + 0.001, () => {
+      roundTop(d.x, d.y, 0.68, d.w, d.d, 0.17, MAT.deskTop, 0.2, 0.34);
+    });
+    box(d.x, d.y, 0.63, d.w - 0.08, d.d - 0.08, 0.05, '#eccaa4', { eastFace: -0.24, northFace: -0.44 });
+    // 모니터 (크림 베젤 + 블루 스크린 + 봇 심볼)
+    const mx = d.x, my = d.y - 0.17;
+    box(mx, my, 0.72, 0.2, 0.12, 0.03, '#e9d3b6');
+    box(mx, my, 0.75, 0.045, 0.045, 0.15, '#e9d3b6');
+    const z0 = 0.9, h = 0.42, w = 0.82;
+    box(mx, my, z0, w, 0.032, h, '#fdf4e7');
     q(depthOf(mx, my, z0 + h / 2) - 0.001, () => {
+      const bl = [mx - w / 2 + 0.03, my + 0.02, z0 + 0.03], br = [mx + w / 2 - 0.03, my + 0.02, z0 + 0.03];
+      const tr = [mx + w / 2 - 0.03, my + 0.02, z0 + h - 0.028], tl = [mx - w / 2 + 0.03, my + 0.02, z0 + h - 0.028];
       if (working) {
-        poly([bl, br, tr, tl], '#0b1a26');
-        for (let k = 0; k < 3; k++) {
-          const v = 0.2 + k * 0.24;
-          const a = bilerp(bl, br, tr, tl, 0.09, v), b = bilerp(bl, br, tr, tl, 0.1 + 0.22 + 0.2 * Math.abs(Math.sin(S.time * 1.4 + k + i)), v);
-          poly([a, b, [b[0], b[1], b[2] + 0.025], [a[0], a[1], a[2] + 0.025]], rgba(col, .65));
+        const a = proj(bl[0], bl[1], bl[2]), b = proj(br[0], br[1], br[2]), c = proj(tr[0], tr[1], tr[2]), dd = proj(tl[0], tl[1], tl[2]);
+        if (a && b && c && dd) {
+          ctx3.save();
+          ctx3.beginPath(); ctx3.moveTo(a.x, a.y); ctx3.lineTo(b.x, b.y); ctx3.lineTo(c.x, c.y); ctx3.lineTo(dd.x, dd.y); ctx3.closePath();
+          const g = ctx3.createLinearGradient(0, dd.y, 0, a.y);
+          g.addColorStop(0, shade(col, 0.2)); g.addColorStop(1, '#3f7fd0');
+          ctx3.fillStyle = g; ctx3.fill(); ctx3.restore();
         }
-        const c = proj(mx, my + 0.03, z0 + h / 2);
-        if (c) drawGlow(c.x, c.y, 0.5 * c.s, col, 0.30);
+        poly([[bl[0], bl[1], bl[2] + 0.11], [br[0], br[1], br[2] + 0.11], [br[0], br[1], br[2] + 0.15], [bl[0], bl[1], bl[2] + 0.15]], 'rgba(255,255,255,.24)');
+        for (let k = 0; k < 2; k++) {
+          const v = 0.74 + k * 0.12;
+          const p1 = bilerp(bl, br, tr, tl, 0.08, v), p2 = bilerp(bl, br, tr, tl, 0.3 + 0.3 * Math.abs(Math.sin(S.time * 1.4 + k + i)), v);
+          poly([p1, p2, [p2[0], p2[1], p2[2] + 0.02], [p1[0], p1[1], p1[2] + 0.02]], 'rgba(232,245,255,.6)');
+        }
+        botGlyph(mx, my + 0.022, z0 + h * 0.46, 0.1, 'rgba(255,255,255,.95)', 'rgba(26,64,124,.95)');
+        const c2 = proj(mx, my + 0.03, z0 + h / 2);
+        if (c2) drawGlow(c2.x, c2.y, 0.46 * c2.s, col, 0.28);
       } else {
-        poly([bl, br, tr, tl], '#0f1216');
-        poly([[bl[0], bl[1], bl[2] + 0.06], [br[0], br[1], br[2] + 0.06], [br[0], br[1], br[2] + 0.08], [bl[0], bl[1], bl[2] + 0.08]], 'rgba(120,150,175,.10)');
+        poly([bl, br, tr, tl], '#2f5fa8');
+        botGlyph(mx, my + 0.02, z0 + h * 0.46, 0.1, 'rgba(255,255,255,.55)', 'rgba(26,64,124,.8)');
+        poly([[bl[0], bl[1], bl[2] + 0.06], [br[0], br[1], br[2] + 0.06], [br[0], br[1], br[2] + 0.09], [bl[0], bl[1], bl[2] + 0.09]], 'rgba(255,255,255,.14)');
+        const c2 = proj(mx, my + 0.03, z0 + h / 2);
+        if (c2) drawGlow(c2.x, c2.y, 0.36 * c2.s, '#6fb6ff', 0.12);
       }
     });
-    box(mx + 0.02, my + 0.38, 0.69, 0.36, 0.13, 0.03, '#221d18');
-    cyl(d.x - 0.64, d.y + 0.14, 0.69, 0.05, 0.1, ag ? ag.color : '#9c8f7e', 8);
-    if (i % 3 === 0) box(d.x + 0.64, d.y + 0.1, 0.69, 0.2, 0.26, 0.04, '#ded3bd');
-    if (seat) chair3(seat, '#5f4d3a', 1.05);
+    // 키보드 · 마우스
+    box(mx, my + 0.34, 0.7, 0.34, 0.12, 0.028, '#fdf4e7');
+    // 작은 스탠드 램프 (따뜻한 불빛)
+    const lx = d.x + (i % 2 ? -0.66 : 0.66), ly = d.y + 0.22;
+    cyl(lx, ly, 0.68, 0.05, 0.02, '#e9d3b6', 10);
+    cyl(lx, ly, 0.7, 0.016, 0.2, '#d9bd9c', 8);
+    q(depthOf(lx, ly, 0.95) - 0.002, () => {
+      const p = proj(lx, ly, 0.95); if (!p) return;
+      const R = 0.078 * p.s;
+      const g = ctx3.createRadialGradient(p.x - R * 0.3, p.y - R * 0.3, 0.5, p.x, p.y, R);
+      g.addColorStop(0, '#fffdf4'); g.addColorStop(0.6, '#ffe6b8'); g.addColorStop(1, '#f0b878');
+      ctx3.beginPath(); ctx3.arc(p.x, p.y, R, 0, TAU); ctx3.fillStyle = g; ctx3.fill();
+      drawGlow(p.x, p.y, R * 4.2, '#ffcf94', 0.18);
+    });
+    glowDisc(lx, ly, 0.55, '#ffca8a', 0.03);
+    // 다육 화분
+    cyl(d.x - 0.5, d.y + 0.2, 0.68, 0.055, 0.075, '#e8b08a', 10);
+    sphere(d.x - 0.5, d.y + 0.2, 0.8, 0.075, '#8cc47f');
+    if (i % 3 === 1) box(d.x + 0.2, d.y + 0.16, 0.68, 0.18, 0.24, 0.035, '#f6e2cd');
+    if (seat) {
+      const cc = (i % 4 === 1) ? '#f6d7cf' : (i % 4 === 3) ? '#d9e6ef' : '#f8ece0';
+      chair3(seat, cc, 0.96);
+    }
   });
-  box(4.1, 5.3, 0, 1.0, 0.34, 1.05, '#4f3e2c');
-  box(4.1, 5.3, 1.05, 1.02, 0.36, 0.05, '#614b36');
-  box(9.98, 0.95, 0, 0.14, 1.3, 1.65, '#372c21');
-  box(9.98, 0.95, 1.65, 0.16, 1.34, 0.06, '#4a3d2e');
-  [2.6, 6.2, 9.8, 13.4].forEach(x => pendant3(x, 6.85, 2.5, 0.33, 'rgba(255,226,180,.95)'));
-  pendant3(8.0, 9.35, 2.42, 0.3, 'rgba(255,226,180,.95)');
+  // 캐비닛 + 파티션 (크림)
+  roundSlab(4.1, 5.3, 0, 1.0, 0.34, 1.0, 0.06, '#f4e2cb');
+  roundSlab(4.1, 5.3, 1.0, 1.02, 0.36, 0.06, 0.05, '#fdf2e2', { topShade: 0.34 });
+  box(9.98, 0.95, 0, 0.14, 1.3, 1.62, '#f7e6d2');
+  roundSlab(9.98, 0.95, 1.62, 0.2, 1.34, 0.06, 0.05, '#fdf2e2');
+  [2.6, 6.2, 9.8, 13.4].forEach(x => pendant3(x, 6.85, 2.5, 0.33, 'rgba(255,236,198,.95)'));
+  pendant3(8.0, 9.35, 2.42, 0.3, 'rgba(255,236,198,.95)');
 }
 
 function pendant3(x, y, z, size, col) {
   q(depthOf(x, y, z) - 0.01, () => {
     const s = proj(x, y, z);
     if (!s) return;
-    // 케이블
     const top = proj(x, y, W.h);
-    if (top) { ctx3.beginPath(); ctx3.moveTo(s.x, s.y); ctx3.lineTo(top.x, top.y); ctx3.strokeStyle = 'rgba(255,255,255,.12)'; ctx3.lineWidth = 1.2; ctx3.stroke(); }
-    // 갓
+    if (top) { ctx3.beginPath(); ctx3.moveTo(s.x, s.y); ctx3.lineTo(top.x, top.y); ctx3.strokeStyle = 'rgba(150,112,80,.35)'; ctx3.lineWidth = 1.2; ctx3.stroke(); }
     ctx3.save();
-    ctx3.beginPath(); ctx3.ellipse(s.x, s.y, size * 1.25 * s.s, size * 0.55 * s.s, 0, 0, TAU);
-    ctx3.fillStyle = '#2e2820'; ctx3.fill();
-    ctx3.beginPath(); ctx3.ellipse(s.x, s.y + 2, size * 1.18 * s.s, size * 0.5 * s.s, 0, 0, TAU);
-    ctx3.fillStyle = shade('#f6d6a8', 0.05); ctx3.fill();
+    ctx3.beginPath(); ctx3.ellipse(s.x, s.y, size * 1.1 * s.s, size * 0.46 * s.s, 0, 0, TAU);
+    ctx3.fillStyle = '#e8c9a4'; ctx3.fill();
+    ctx3.beginPath(); ctx3.ellipse(s.x, s.y + 2, size * 1.02 * s.s, size * 0.42 * s.s, 0, 0, TAU);
+    ctx3.fillStyle = '#ffedcd'; ctx3.fill();
     ctx3.restore();
-    drawGlow(s.x, s.y, size * 2.2 * s.s, '#ffd9a8', 0.55);
+    drawGlow(s.x, s.y, size * 1.7 * s.s, '#ffd9a8', 0.15);
   });
-  glowDisc(x, y, size * 2.4, '#ffce8a', 0.08);
+  glowDisc(x, y, size * 2.2, '#ffce8a', 0.03);
 }
 
-/* ---------------- lounge ---------------- */
+/* ---------------- lounge & cafe bar ---------------- */
 function drawLounge3() {
   SOFAS.forEach((s, i) => {
+    softShadow(s.x, s.y + 0.05, s.w * 0.62, s.d * 0.72, 0.4);
     if (s.vertical) {
-      box(s.x, s.y, 0, s.w, s.d, 0.3, MAT.sofa);
-      box(s.x - 0.3, s.y, 0.3, 0.2, s.d, 0.46, MAT.sofaBack);
-      [s.y - s.d / 2 + 0.28, s.y + s.d / 2 - 0.28].forEach(yy => box(s.x, yy, 0.3, s.w, 0.16, 0.2, shade(MAT.sofa, .1)));
-      box(s.x + 0.1, s.y - 0.45, 0.32, s.w - 0.16, 0.82, 0.1, MAT.sofaCushion);
-      box(s.x + 0.1, s.y + 0.5, 0.32, s.w - 0.16, 0.82, 0.1, MAT.sofaCushion);
+      roundSlab(s.x, s.y, 0, s.w, s.d, 0.26, 0.12, MAT.sofa, { topShade: 0.26 });
+      roundSlab(s.x - 0.27, s.y, 0.26, 0.22, s.d, 0.42, 0.09, MAT.sofaBack, { topShade: 0.22 });
+      [s.y - s.d / 2 + 0.3, s.y + s.d / 2 - 0.3].forEach(yy => roundSlab(s.x, yy, 0.26, s.w, 0.2, 0.2, 0.08, shade(MAT.sofa, .12)));
+      roundSlab(s.x + 0.09, s.y - 0.45, 0.28, s.w - 0.18, 0.8, 0.12, 0.1, MAT.sofaCushion, { topShade: 0.32 });
+      roundSlab(s.x + 0.09, s.y + 0.5, 0.28, s.w - 0.18, 0.8, 0.12, 0.1, MAT.sofaCushion, { topShade: 0.32 });
     } else {
-      box(s.x, s.y, 0, s.w, s.d, 0.3, MAT.sofa);
-      box(s.x, s.y - s.d / 2 + 0.1, 0.3, s.w, 0.2, 0.46, MAT.sofaBack);
-      [s.x - s.w / 2 + 0.14, s.x + s.w / 2 - 0.14].forEach(xx => box(xx, s.y, 0.3, 0.2, s.d, 0.2, shade(MAT.sofa, .1)));
-      [-0.88, 0, 0.88].forEach(dx => box(s.x + dx, s.y + 0.11, 0.32, 0.8, 0.6, 0.1, MAT.sofaCushion));
+      roundSlab(s.x, s.y, 0, s.w, s.d, 0.26, 0.12, MAT.sofa, { topShade: 0.26 });
+      roundSlab(s.x, s.y - s.d / 2 + 0.11, 0.26, s.w, 0.22, 0.42, 0.09, MAT.sofaBack, { topShade: 0.22 });
+      [s.x - s.w / 2 + 0.16, s.x + s.w / 2 - 0.16].forEach(xx => roundSlab(xx, s.y, 0.26, 0.2, s.d, 0.2, 0.08, shade(MAT.sofa, .12)));
+      [-0.86, 0.02, 0.9].forEach(dx => roundSlab(s.x + dx, s.y + 0.1, 0.28, 0.78, 0.58, 0.12, 0.12, MAT.sofaCushion, { topShade: 0.32 }));
+      box(s.x - 1.0, s.y - 0.16, 0.34, 0.3, 0.12, 0.26, '#f3d3c6');
+      box(s.x + 1.02, s.y - 0.16, 0.34, 0.3, 0.12, 0.24, '#dfe8f0');
+      box(s.x - 0.1, s.y + 0.34, 0.26, 0.9, 0.34, 0.05, '#f7e2d2');
     }
   });
-  box(13.5, 3.0, 0, 1.1, 0.62, 0.34, '#5b3e29');
-  box(13.5, 3.0, 0.34, 1.2, 0.7, 0.05, '#8d6647');
-  cyl(13.25, 3.0, 0.39, 0.055, 0.1, '#eadfc9', 8);
-  cyl(13.72, 2.95, 0.39, 0.05, 0.08, '#c8bca7', 8);
-  // 바
-  box(BAR.x, BAR.y, 0, BAR.w, BAR.d, BAR.h - 0.06, '#4e3a28');
-  box(BAR.x, BAR.y, BAR.h - 0.06, BAR.w + 0.1, BAR.d + 0.1, 0.08, '#8d8272', { topShade: 0.3 });
-  box(BAR.x - 0.42, BAR.y - 0.04, BAR.h + 0.02, 0.44, 0.34, 0.46, '#2f2a25');
-  box(BAR.x - 0.42, BAR.y + 0.13, BAR.h + 0.12, 0.3, 0.06, 0.2, '#453d35');
-  cyl(BAR.x + 0.3, BAR.y + 0.06, BAR.h + 0.02, 0.12, 0.14, '#d5ccbb', 10);
-  [[14.15, 4.4], [15.1, 4.4]].forEach(([x, y]) => { cyl(x, y, 0.02, 0.05, 0.58, '#3a3128', 8); cyl(x, y, 0.58, 0.18, 0.06, '#6a5236', 12); });
+  // 작은 원형 테이블 + 책 + 스탠드
+  softShadow(13.5, 3.0, 0.75, 0.5, 0.4);
+  cyl(13.5, 3.0, 0.02, 0.16, 0.04, '#eed9bf', 12);
+  cyl(13.5, 3.0, 0.06, 0.05, 0.3, '#e3c9ac', 10);
+  cyl(13.5, 3.0, 0.36, 0.38, 0.06, '#f6e4cd', 18);
+  poly(ellPts(13.5, 3.0, 0.38, 0.38, 0.425), '#fdf2e2');
+  box(13.4, 2.98, 0.42, 0.24, 0.17, 0.03, '#efc3a8');
+  box(13.4, 2.98, 0.45, 0.2, 0.14, 0.02, '#cfe2c4');
+  q(depthOf(13.72, 2.95, 0.62), () => {
+    cyl(13.72, 2.95, 0.42, 0.035, 0.16, '#e3c9ac', 8);
+    const p = proj(13.72, 2.95, 0.62); if (!p) return;
+    const R = 0.05 * p.s;
+    const g = ctx3.createRadialGradient(p.x, p.y, 0.5, p.x, p.y, R);
+    g.addColorStop(0, '#fffdf4'); g.addColorStop(1, '#f6c78e');
+    ctx3.beginPath(); ctx3.arc(p.x, p.y, R, 0, TAU); ctx3.fillStyle = g; ctx3.fill();
+    drawGlow(p.x, p.y, R * 4, '#ffcf94', 0.16);
+  });
+  // 카페 바 (크림 카운터 + 우드 상판 + 하단 LED)
+  softShadow(BAR.x, BAR.y, 1.15, 0.55, 0.42);
+  box(BAR.x, BAR.y, 0, BAR.w, BAR.d, BAR.h - 0.07, '#f5e2c9', { topShade: 0.28 });
+  box(BAR.x, BAR.y, BAR.h - 0.07, BAR.w + 0.12, BAR.d + 0.1, 0.08, '#c99a6c', { topShade: 0.34 });
+  // 하단 LED 스트립 + 봇 로고
+  const fy = BAR.y + BAR.d / 2 + 0.02;
+  q(depthOf(BAR.x, fy, 0.16) - 0.003, () => {
+    poly([[BAR.x - BAR.w / 2 + 0.1, fy, 0.13], [BAR.x + BAR.w / 2 - 0.1, fy, 0.13], [BAR.x + BAR.w / 2 - 0.1, fy, 0.19], [BAR.x - BAR.w / 2 + 0.1, fy, 0.19]], 'rgba(255,226,176,.98)');
+    const p = proj(BAR.x, fy, 0.16); if (p) drawGlow(p.x, p.y, 2.2 * p.s, '#ffbb74', 0.34);
+    botGlyph(BAR.x + 0.62, fy - 0.006, 0.34, 0.1, 'rgba(255,226,176,.98)', 'rgba(120,74,40,.9)');
+  });
+  glowDisc(BAR.x, BAR.y + 0.55, 1.3, '#ffc07a', 0.1);
+  // 에스프레소 머신
+  box(BAR.x - 0.45, BAR.y - 0.02, BAR.h + 0.01, 0.42, 0.32, 0.42, '#f9efe2');
+  box(BAR.x - 0.45, BAR.y - 0.02, BAR.h + 0.43, 0.4, 0.3, 0.05, '#e3d3c0');
+  box(BAR.x - 0.45, BAR.y + 0.14, BAR.h + 0.05, 0.3, 0.05, 0.26, '#cbb7a2');
+  cyl(BAR.x - 0.6, BAR.y + 0.16, BAR.h + 0.06, 0.045, 0.06, '#fdf4e7', 8);
+  cyl(BAR.x - 0.3, BAR.y + 0.16, BAR.h + 0.06, 0.045, 0.06, '#fdf4e7', 8);
+  // 머그컵들
+  [[0.22, 0.05], [0.36, -0.05], [0.5, 0.04]].forEach(([dx, dy]) => cyl(BAR.x + dx, BAR.y + dy, BAR.h + 0.01, 0.05, 0.09, '#fdf4e7', 10));
+  cyl(BAR.x + 0.72, BAR.y - 0.02, BAR.h + 0.01, 0.075, 0.11, '#e6b48e', 10);
+  // 우드 스툴
+  [[14.15, 4.4], [15.1, 4.4]].forEach(([x, y]) => { cyl(x, y, 0.02, 0.055, 0.56, '#d8b48c', 8); cyl(x, y, 0.58, 0.19, 0.07, '#c39a6e', 14); });
+  // 벽 선반 + 컵
+  q(depthOf(11.5, 0.34, 1.5), () => {
+    box(11.35, 0.42, 1.42, 0.9, 0.18, 0.05, '#fdf3e5');
+    for (let i = 0; i < 3; i++) {
+      const p = proj(11.05 + i * 0.3, 0.42, 1.52);
+      if (p) { ctx3.beginPath(); ctx3.ellipse(p.x, p.y, 0.045 * p.s, 0.05 * p.s, 0, 0, TAU); ctx3.fillStyle = i % 2 ? '#f6d7c4' : '#fdf4e7'; ctx3.fill(); }
+    }
+  });
   plant3(10.85, 0.65, 0.66);
   plant3(15.3, 4.55, 0.58);
   plant3(0.62, 4.12, 0.5);
   plant3(15.35, 0.55, 0.5);
-  pendant3(13.5, 2.35, 2.35, 0.36, 'rgba(255,215,170,.9)');
+  pendant3(13.5, 2.35, 2.35, 0.36, 'rgba(255,231,190,.92)');
 }
 
 function plant3(x, y, s) {
-  cyl(x, y, 0, 0.21 * s, 0.32 * s, '#77503a', 10);
-  const h = 0.3 * s;
-  [[0, 0, 0.44], [0.13, 0.06, 0.35], [-0.11, 0.09, 0.32], [0.02, -0.13, 0.37]].forEach((o, i) => {
-    sphere(x + o[0] * s, y + o[1] * s, h + o[2] * s, 0.2 * s, i % 2 ? '#417f4c' : '#356b42');
+  softShadow(x, y, 0.44 * s, 0.44 * s, 0.44);
+  q(depthOf(x, y, 0.5 * s) - 0.002, () => {
+    // 흰 화분
+    cyl(x, y, 0, 0.2 * s, 0.26 * s, '#fdf5ec', 16);
+    cyl(x, y, 0.26 * s, 0.185 * s, 0.14 * s, '#fffaf3', 16);
+    cyl(x, y, 0.38 * s, 0.16 * s, 0.03 * s, '#b98a63', 14);
+    // 잎 (겹겹 둥근 잎사귀)
+    const leaves = [
+      [0, 0, 0.66, 1.0, '#4f9a5b'], [0.24, 0.1, 0.5, 0.82, '#67b06a'], [-0.22, 0.12, 0.48, 0.8, '#3f8a52'],
+      [0.08, -0.24, 0.56, 0.86, '#5aa864'], [-0.12, -0.08, 0.6, 0.74, '#71b873'], [0.2, -0.06, 0.42, 0.7, '#4a9159'],
+      [-0.06, 0.24, 0.44, 0.7, '#65ae67'],
+    ];
+    leaves.forEach(([ox, oy, hz, rs, cc], i) => {
+      const p2 = proj(x + ox * s, y + oy * s, 0.36 * s + hz * s);
+      if (!p2) return;
+      const R = 0.2 * s * p2.s * rs;
+      cBall(p2.x, p2.y, R, R * 0.86, cc, (i * 1.3) % 1 - 0.5, 0.5, -0.42);
+    });
+    // 늘어진 덩굴 (큰 화분만)
+    if (s > 0.55) {
+      const p0 = proj(x + 0.16 * s, y + 0.16 * s, 0.42 * s);
+      if (p0) {
+        ctx3.save();
+        ctx3.strokeStyle = '#4f9457'; ctx3.lineWidth = Math.max(1.2, 0.018 * p0.s); ctx3.lineCap = 'round';
+        ctx3.beginPath(); ctx3.moveTo(p0.x, p0.y);
+        ctx3.quadraticCurveTo(p0.x + 0.1 * s * p0.s, p0.y + 0.12 * s * p0.s, p0.x + 0.04 * s * p0.s, p0.y + 0.24 * s * p0.s);
+        ctx3.stroke();
+        for (let k = 0; k < 4; k++) {
+          ctx3.beginPath();
+          ctx3.ellipse(p0.x + (0.06 - k * 0.008) * s * p0.s, p0.y + (0.09 + k * 0.05) * s * p0.s, 0.035 * s * p0.s, 0.024 * s * p0.s, 0.5, 0, TAU);
+          ctx3.fillStyle = k % 2 ? '#69b06c' : '#549c5d'; ctx3.fill();
+        }
+        ctx3.restore();
+      }
+    }
   });
-  floorDisc(x, y, 0.26 * s, 'rgba(0,0,0,.22)');
+}
+
+/* ---------------- bookshelf & rack ---------------- */
+function drawShelf3() {
+  const S0 = SHELF;
+  const x0 = S0.x + 0.06, x1 = S0.x + S0.w + 0.06, y0 = S0.y, y1 = S0.y + S0.d;
+  softShadow((x0 + x1) / 2, (y0 + y1) / 2, 0.5, 1.15, 0.36);
+  box(x0 + 0.05, (y0 + y1) / 2, 0, 0.1, y1 - y0, 1.98, '#f3e0c7');
+  box(x1 - 0.03, (y0 + y1) / 2, 0, 0.06, y1 - y0, 1.98, '#e9d2b2');
+  [y0 + 0.03, y1 - 0.03].forEach(yy => box((x0 + x1) / 2, yy, 0, x1 - x0, 0.06, 1.98, '#f6e5cf'));
+  [0, 0.5, 1.0, 1.5, 1.94].forEach(z => box((x0 + x1) / 2, (y0 + y1) / 2, z, x1 - x0 - 0.04, y1 - y0 - 0.02, 0.045, '#f8e9d5', { topShade: 0.32 }));
+  const bookCols = ['#e0918c', '#f0c579', '#8fbfa2', '#93a9dc', '#d4a0cc', '#e8a86a', '#9fc9c0', '#e8c9a8'];
+  [0.05, 0.55, 1.05, 1.55].forEach((z, si) => {
+    let yy = y0 + 0.1;
+    for (let i = 0; i < 9; i++) {
+      const w = 0.07 + ((i * 7 + si * 3) % 4) * 0.022;
+      const hh = 0.24 + ((i * 5 + si) % 3) * 0.045;
+      box(x0 + 0.34, yy + w / 2, z + 0.045, 0.3, w, hh, bookCols[(i + si * 3) % bookCols.length], { topShade: 0.2, south: 0.04 });
+      yy += w + 0.012;
+      if (yy > y1 - 0.2) break;
+    }
+  });
+  // 보관 박스 + 화분
+  box(x1 - 0.22, y0 + 0.35, 1.99, 0.3, 0.32, 0.2, '#f6dcc0');
+  q(depthOf(x0 + 0.2, y0 + 0.2, 2.2), () => {
+    cyl(x0 + 0.28, y1 - 0.3, 1.99, 0.09, 0.12, '#e6b28c', 10);
+    [[0, 0], [0.05, 0.04], [-0.04, 0.05]].forEach((o, i) => sphere(x0 + 0.28 + o[0], y1 - 0.3 + o[1], 2.2 + i * 0.03, 0.11, i % 2 ? '#5aa163' : '#3f8850'));
+    // 늘어진 덩굴
+    ctx3.save(); ctx3.strokeStyle = '#4f9457'; ctx3.lineWidth = 1.4;
+    const p0 = proj(x0 + 0.28, y1 - 0.28, 2.16);
+    if (p0) {
+      ctx3.beginPath(); ctx3.moveTo(p0.x, p0.y);
+      ctx3.quadraticCurveTo(p0.x + 14, p0.y + 12, p0.x + 6, p0.y + 30);
+      ctx3.stroke();
+      for (let k = 0; k < 4; k++) { ctx3.beginPath(); ctx3.ellipse(p0.x + 6 + k * 1.6, p0.y + 16 + k * 6, 3.2, 2, 0.4, 0, TAU); ctx3.fillStyle = '#6aab63'; ctx3.fill(); }
+    }
+    ctx3.restore();
+  });
+  // 하단 LED 스트립
+  q(depthOf(x1, (y0 + y1) / 2, 0.12) - 0.002, () => {
+    poly([[x1 + 0.005, y0 + 0.06, 0.1], [x1 + 0.005, y1 - 0.06, 0.1], [x1 + 0.005, y1 - 0.06, 0.14], [x1 + 0.005, y0 + 0.06, 0.14]], 'rgba(255,222,170,.95)');
+    const p = proj(x1, (y0 + y1) / 2, 0.12); if (p) drawGlow(p.x, p.y, 1.6 * p.s, '#ffc078', 0.28);
+  });
+  glowDisc(x1 - 0.1, (y0 + y1) / 2, 0.8, '#ffbe80', 0.07);
+}
+
+function drawRack3() {
+  const R0 = RACK, x0 = R0.x + 0.08, x1 = R0.x + R0.w - 0.02, yc = R0.y + R0.d / 2;
+  softShadow((x0 + x1) / 2, yc, 0.5, 1.0, 0.4);
+  // 크림 수납장
+  box((x0 + x1) / 2, yc, 0, x1 - x0, R0.d, 1.86, '#f7e4cf', { topShade: 0.24, eastFace: -0.22, northFace: -0.4 });
+  box(x1 - 0.02, yc, 0, 0.03, R0.d - 0.06, 1.74, '#edd4b8');
+  [0, 0.46, 0.92, 1.38, 1.82].forEach(z => box((x0 + x1) / 2, yc, z, x1 - x0 + 0.03, R0.d + 0.02, 0.05, '#fdf1e2', { topShade: 0.3 }));
+  // 수납 박스 · 책 · 소품
+  const cols = ['#efb08f', '#f4d08c', '#a9cfa9', '#a9bfe0', '#e0b0cf', '#f0c9a0'];
+  [0.05, 0.51, 0.97, 1.43].forEach((z, si) => {
+    let yy = R0.y + 0.08;
+    for (let i = 0; i < 4; i++) {
+      const w = 0.22 + ((i + si) % 3) * 0.1;
+      const hh = 0.16 + ((i * 2 + si) % 3) * 0.06;
+      box(x1 - 0.22, yy + w / 2, z + 0.05, 0.26, w, hh, cols[(i + si * 2) % cols.length], { topShade: 0.22, eastFace: -0.2 });
+      yy += w + 0.03;
+      if (yy > R0.y + R0.d - 0.2) break;
+    }
+  });
+  // 위쪽 화분
+  q(depthOf(x1 - 0.2, R0.y + 0.3, 2.0), () => {
+    cyl(x1 - 0.22, R0.y + 0.28, 1.86, 0.09, 0.12, '#fdf5ec', 12);
+    [[0, 0, 0.1], [0.05, 0.04, 0.06], [-0.04, 0.05, 0.08]].forEach((o, i) => sphere(x1 - 0.22 + o[0], R0.y + 0.28 + o[1], 1.98 + o[2], 0.1, i % 2 ? '#5aa163' : '#3f8850'));
+  });
 }
 
 /* ---------------- agents ---------------- */
@@ -2533,7 +3014,7 @@ function drawRoomLabels() {
   for (const [t, x, y] of list) {
     const p = proj(x, y, 0.02); if (!p) continue;
     ctx3.font = `800 ${Math.max(8, 0.3 * p.s)}px "Noto Sans KR", sans-serif`;
-    ctx3.fillStyle = 'rgba(255,255,255,.085)';
+    ctx3.fillStyle = 'rgba(146,96,64,.22)';
     ctx3.fillText(t, p.x, p.y);
   }
   ctx3.restore();
@@ -2568,16 +3049,19 @@ function render3D(dt) {
   if (!CW) resize3();
   setupCam();
   ctx3.clearRect(0, 0, CW, CH);
-  const bg = ctx3.createLinearGradient(0, 0, 0, CH);
-  bg.addColorStop(0, '#0b0a09'); bg.addColorStop(0.5, '#100e0c'); bg.addColorStop(1, '#070606');
+  // 따뜻한 모브/플럼 배경 (아기자기한 디오라마)
+  const bg = ctx3.createRadialGradient(CW * 0.5, CH * 0.34, 30, CW * 0.5, CH * 0.55, Math.max(CW, CH) * 0.86);
+  bg.addColorStop(0, '#5a3f4c'); bg.addColorStop(0.42, '#452f3c'); bg.addColorStop(0.78, '#33222d'); bg.addColorStop(1, '#241820');
   ctx3.fillStyle = bg; ctx3.fillRect(0, 0, CW, CH);
-  const halo = ctx3.createRadialGradient(CW * 0.5, CH * 0.42, 40, CW * 0.5, CH * 0.45, Math.max(CW, CH) * 0.62);
-  halo.addColorStop(0, 'rgba(120,86,52,.14)'); halo.addColorStop(1, 'rgba(0,0,0,0)');
+  const halo = ctx3.createRadialGradient(CW * 0.5, CH * 0.5, 20, CW * 0.5, CH * 0.52, Math.max(CW, CH) * 0.5);
+  halo.addColorStop(0, 'rgba(255,206,158,.13)'); halo.addColorStop(1, 'rgba(255,206,158,0)');
   ctx3.fillStyle = halo; ctx3.fillRect(0, 0, CW, CH);
 
   drawFloor3();
   Q.length = 0; GLASS.length = 0;
   drawWalls3();
+  drawShelf3();
+  drawRack3();
   drawMeeting3();
   drawCommand3();
   drawDesks3();
@@ -2590,8 +3074,12 @@ function render3D(dt) {
   drawRoomLabels();
   drawLabels3();
 
-  const vg = ctx3.createRadialGradient(CW / 2, CH * 0.45, Math.min(CW, CH) * 0.38, CW / 2, CH * 0.5, Math.max(CW, CH) * 0.8);
-  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.5)');
+  // 따뜻한 앰비언스 + 플럼 비네트
+  const amb = ctx3.createRadialGradient(CW * 0.5, CH * 0.34, 20, CW * 0.5, CH * 0.5, Math.max(CW, CH) * 0.7);
+  amb.addColorStop(0, 'rgba(255,214,164,.02)'); amb.addColorStop(0.55, 'rgba(255,196,140,.0)'); amb.addColorStop(1, 'rgba(255,170,110,0)');
+  ctx3.save(); ctx3.globalCompositeOperation = 'lighter'; ctx3.fillStyle = amb; ctx3.fillRect(0, 0, CW, CH); ctx3.restore();
+  const vg = ctx3.createRadialGradient(CW / 2, CH * 0.46, Math.min(CW, CH) * 0.42, CW / 2, CH * 0.5, Math.max(CW, CH) * 0.82);
+  vg.addColorStop(0, 'rgba(52,32,44,0)'); vg.addColorStop(1, 'rgba(40,24,33,.45)');
   ctx3.fillStyle = vg; ctx3.fillRect(0, 0, CW, CH);
 }
 
