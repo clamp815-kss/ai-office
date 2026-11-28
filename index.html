@@ -3565,14 +3565,12 @@ function drawAgent2(a) {
     g.restore();
   }
 
-  // 앉아 있으면 몸을 살짝 접는다 (발끝 기준 축소)
-  if (sitting) {
-    const SC = 0.88;
-    g.save();
-    g.translate(cx, groundY);
-    g.scale(SC, SC);
-    g.translate(-cx, -groundY);
-  }
+  // 발끝을 기준으로 전체 크기 조절 (앉으면 살짝 접는다)
+  const SC = 1.14 * (sitting ? 0.9 : 1);
+  g.save();
+  g.translate(cx, groundY);
+  g.scale(SC, SC);
+  g.translate(-cx, -groundY);
 
   /* ---------------- 꼬리 ---------------- */
   const tailSide = turn > 0.12 ? -1 : turn < -0.12 ? 1 : -1;
@@ -4023,7 +4021,7 @@ function drawAgent2(a) {
     g.restore();
   }
 
-  if (sitting) g.restore();
+  g.restore();
 }
 
 
