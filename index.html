@@ -3680,7 +3680,7 @@ function drawAgent2(a) {
     });
     hBall(g, cx, bodyTop + 9, 3.4, 3.2, L.accent);
   } else if (!L.scarf) {
-    hBall(g, cx, bodyBot - 15, wb * 0.56, 13, shade(L.top, 0.3), 0, 0.32, -0.14);
+    hBall(g, cx, bodyBot - 17, wb * 0.46, 11, shade(L.top, 0.22), 0, 0.3, -0.12);
   }
   // 단추/포인트
   if (L.kind === 'bear' || L.kind === 'duck') {
@@ -3752,7 +3752,10 @@ function drawAgent2(a) {
     });
   } else if (L.kind === 'dog') {
     [-1, 1].forEach(sd => {
-      hBall(g, cx + sd * R * 0.88, headCY - R * 0.12, R * 0.25, R * 0.4, shade(earCol, -0.14), sd * 0.34, 0.28, -0.36);
+      hBall(g, cx + sd * R * 0.92, headCY - R * 0.1, R * 0.28, R * 0.46, shade(earCol, -0.22), sd * 0.36, 0.26, -0.42);
+      g.save(); g.strokeStyle = 'rgba(66,44,70,.3)'; g.lineWidth = 1.4;
+      g.beginPath(); g.ellipse(cx + sd * R * 0.92, headCY - R * 0.1, R * 0.27, R * 0.45, sd * 0.36, 0, TAU); g.stroke();
+      g.restore();
     });
   } else if (L.kind === 'rabbit') {
     [-1, 1].forEach(sd => {
