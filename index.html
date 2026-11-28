@@ -412,6 +412,15 @@ main{flex:1 1 0;display:flex;min-height:0;overflow:hidden}
 .preset .pi{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px}
 .preset .pn{font-size:11.5px;font-weight:800;color:#efe3d3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .preset .pb{font-size:9px;color:var(--dim);font-family:var(--mono);letter-spacing:.04em}
+.avpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:7px}
+.avpick button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 3px 5px;border-radius:11px;border:1px solid var(--line2);background:rgba(255,255,255,.03);transition:.15s}
+.avpick button:hover{background:rgba(255,255,255,.07)}
+.avpick button.sel{border-color:#f6d6a8;background:linear-gradient(180deg,rgba(246,214,168,.20),rgba(246,214,168,.06));box-shadow:0 0 0 1px rgba(246,214,168,.35) inset}
+.avpick canvas{width:52px;height:52px;display:block}
+.avpick .an{font-size:9.5px;line-height:1.15;color:#cbbdaf;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.avpick.avrow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:2px 0 2px}
+.avpick.avrow button{padding:2px;border-radius:8px;min-width:0}
+.avpick.avrow canvas{width:100%;max-width:32px;height:auto;aspect-ratio:1;margin:0 auto}
 .pick.intervals button{min-width:52px;text-align:center}
 .pick button.sel{box-shadow:0 0 0 1px rgba(255,255,255,.16) inset}
 .field code{font-family:var(--mono);font-size:10px;background:#0e0d0c;padding:1px 4px;border-radius:4px;color:#b9d8c4}
@@ -786,6 +795,10 @@ main{flex:1 1 0;display:flex;min-height:0;overflow:hidden}
     <p class="sub">AI 종류를 고르고 연결 방식·응답 시간을 정하면, 그 설정 그대로 오피스에 자리를 잡습니다. 등록한 에이전트만 남고 가짜 봇은 없습니다.</p>
 
     <div class="field"><label>AI 종류 · 프리셋</label><div class="presets" id="agPresets"></div></div>
+
+    <div class="field"><label>캐릭터 외형 · 13종</label><div class="avpick" id="agAvatars"></div>
+      <div class="hintline">캐릭터 시트 13종입니다. 고른 모습 그대로 3D 오피스에 서고, 앞·앞측면·옆·뒷모습과 작업·휴식·대화 표정이 함께 바뀝니다.</div>
+    </div>
 
     <div class="row2">
       <div class="field"><label>이름</label><input type="text" id="agName" placeholder="예: 클로드" maxlength="14"></div>
@@ -1190,6 +1203,7 @@ function addAgent(def, opts = {}) {
     provider: pv.id, conn: CONNS[def.conn] ? def.conn : 'manual',
     endpoint: def.endpoint || '', method: def.method === 'get' ? 'get' : 'post', apiKey: def.apiKey || '',
     interval: INTERVALS.includes(Number(def.interval)) ? Number(def.interval) : 5,
+    avatar: (def.avatar && AVATARS[def.avatar]) ? def.avatar : defaultAvatarFor(pv.id),
     x: opts.x ?? 8.0, y: opts.y ?? 10.15, facing: -Math.PI / 2, path: [], walk: 0,
     state: 'moving', seat: null, room: 'work', bubble: null, typing: 0, anim: Math.random() * 9,
     since: Date.now(), src: def.src || 'user', homeRoom: def.seat || 'work', lead: !!def.lead,
@@ -1210,7 +1224,10 @@ function addAgent(def, opts = {}) {
 
 function sitAt(a, seat) {
   a.seat = seat; seat.by = a.id;
-  a.x = seat.x; a.y = seat.y; a.facing = seat.facing;
+  // 의자 앞쪽에 앉아 등받이에 몸이 가리지 않게 살짝 앞으로
+  a.x = seat.x + Math.cos(seat.facing) * 0.13;
+  a.y = seat.y + Math.sin(seat.facing) * 0.13;
+  a.facing = seat.facing;
   a.path = []; a.seatTarget = null;
   a.state = seat.kind === 'meeting' ? 'meeting' : seat.kind === 'lounge' ? 'rest' : 'work';
   a.room = seat.kind;
@@ -1359,7 +1376,7 @@ function save() {
         name: a.name, role: a.role, tag: a.tag, color: a.color, icon: a.icon, desc: a.desc, enabled: a.enabled,
         seat: a.seat ? a.seat.id : null, room: a.seat ? a.seat.kind : (a.homeRoom || 'work'),
         model: a.model, src: a.src, provider: a.provider, conn: a.conn, endpoint: a.endpoint, method: a.method || 'post',
-        apiKey: a.apiKey, interval: a.interval, homeRoom: a.homeRoom, lead: !!a.lead,
+        apiKey: a.apiKey, interval: a.interval, homeRoom: a.homeRoom, lead: !!a.lead, avatar: avatarIdOf(a),
       })),
       messages: S.messages.slice(-60), notes: S.notes, files: S.files.slice(0, 20), stats: S.stats,
     }));
@@ -1381,10 +1398,11 @@ function load() {
         provider: pv.id, conn: CONNS[x.conn] ? x.conn : 'manual', endpoint: x.endpoint || '', method: x.method === 'get' ? 'get' : 'post',
         apiKey: x.apiKey || '', interval: INTERVALS.includes(Number(x.interval)) ? Number(x.interval) : 5,
         homeRoom: x.homeRoom || x.room || 'work', lead: !!x.lead,
+        avatar: (x.avatar && AVATARS[x.avatar]) ? x.avatar : defaultAvatarFor(pv.id),
       };
       const st = x.seat ? [...SEATS.work, ...SEATS.meeting, ...SEATS.lounge, ...SEATS.command].find(s => s.id === x.seat && !s.by) : null;
       if (st && a.enabled) {
-        a.seat = st; st.by = a.id; a.x = st.x; a.y = st.y; a.facing = st.facing;
+        a.seat = st; st.by = a.id; a.x = st.x + Math.cos(st.facing) * 0.13; a.y = st.y + Math.sin(st.facing) * 0.13; a.facing = st.facing;
         a.state = st.kind === 'meeting' ? 'meeting' : st.kind === 'lounge' ? 'rest' : 'work';
         a.room = st.kind;
       } else if (!a.enabled) { a.state = 'idle'; }
@@ -1935,7 +1953,7 @@ function drawCommand3() {
   // 작은 화분
   cyl(C.x + 1.44, C.y - 0.02, 0.72, 0.06, 0.08, '#e8b08a', 10);
   sphere(C.x + 1.44, C.y - 0.02, 0.84, 0.09, '#7dba74');
-  chair3(SEATS.command[0], '#f8ece0', 1.08);
+  chair3(SEATS.command[0], '#f8ece0', 1.08, !!SEATS.command[0].by);
   // 서류 캐비닛
   roundSlab(9.62, 1.1, 0.06, 0.66, 0.5, 0.86, 0.06, '#f6e6d3');
 
@@ -1995,7 +2013,7 @@ function archLedPath(x0, x1, y, zBase, zApex, col) {
   ctx3.restore();
 }
 
-function chair3(seat, col = '#f8ece0', scale = 1) {
+function chair3(seat, col = '#f8ece0', scale = 1, lowBack = false) {
   const { x, y, facing } = seat;
   const c = Math.cos(facing), s = Math.sin(facing);
   const bx = x - c * 0.23 * scale, by = y - s * 0.23 * scale;
@@ -2013,8 +2031,9 @@ function chair3(seat, col = '#f8ece0', scale = 1) {
     ovalTop(x, y, 0.445, 0.17 * scale, 0.17 * scale, shade(col, 0.32), 0.1, 16);
   });
   // 등받이 (둥근 사각 패널, 크림 그라디언트)
-  q(depthOf(bx, by, 0.64) + 0.004, () => {
-    const p1 = proj(bx, by, 0.42), p2 = proj(bx, by, 0.86);
+  const backTop = lowBack ? 0.70 : 0.86;
+  q(depthOf(bx, by, lowBack ? 0.56 : 0.64) + 0.004, () => {
+    const p1 = proj(bx, by, 0.42), p2 = proj(bx, by, backTop);
     if (!p1 || !p2) return;
     const w = 0.4 * scale * p1.s, h = Math.abs(p1.y - p2.y) * 0.92;
     const rx = p1.x - w / 2, ry = Math.min(p1.y, p2.y), rr = Math.min(w, h) * 0.34;
@@ -2051,7 +2070,7 @@ function drawMeeting3() {
   cyl(TABLE.x + 0.92, TABLE.y + 0.06, 0.66, 0.07, 0.09, '#e8b08a', 10);
   sphere(TABLE.x + 0.92, TABLE.y + 0.06, 0.79, 0.1, '#7dba74');
   box(TABLE.x + 0.7, TABLE.y - 0.12, 0.66, 0.16, 0.2, 0.03, '#f2e3cf');
-  SEATS.meeting.forEach(s => chair3(s, '#f8ece0', 0.94));
+  SEATS.meeting.forEach(s => chair3(s, '#f8ece0', 0.94, !!s.by));
   hologram3(TABLE.x, TABLE.y, 0.74);
   // 서벽 책장 + 액자 (회의실 아기자기 소품)
   const sx0 = 0.36, sx1 = 0.7, sy0 = 1.12, sy1 = 3.5, sz = 1.86;
@@ -2216,7 +2235,7 @@ function drawDesks3() {
     if (i % 3 === 1) box(d.x + 0.2, d.y + 0.16, 0.68, 0.18, 0.24, 0.035, '#f6e2cd');
     if (seat) {
       const cc = (i % 4 === 1) ? '#f6d7cf' : (i % 4 === 3) ? '#d9e6ef' : '#f8ece0';
-      chair3(seat, cc, 0.96);
+      chair3(seat, cc, 0.96, !!seat.by);
     }
   });
   // 캐비닛 + 파티션 (크림)
@@ -2521,13 +2540,500 @@ function cTorso(cx, topY, botY, wt, wb, col) {
   ctx3.fillStyle = g; ctx3.fill();
 }
 
+/* ============================================================
+   에이전트 캐릭터 — 캐릭터 시트 13종 (보송보송 플러시 3D 피규어)
+   ============================================================ */
+const AVATARS = {
+  'clover-green':   { name: '클로버 (초록)',        shape: 'clover', base: '#58D64A', cheek: '#FFB9CC', face: 'big',     desc: '네잎클로버' },
+  'clover-yellow':  { name: '옐로 클로버',          shape: 'clover', base: '#FFD22E', cheek: '#FFC0A8', face: 'sparkle', desc: '밝은 노랑 네잎클로버' },
+  'clover-pink':    { name: '클로버 (연핑크)',      shape: 'clover', base: '#FFC5E1', cheek: '#FFA8C4', face: 'squint',  desc: '연핑크 네잎클로버' },
+  'clover-hotpink': { name: '네잎클로버 (핫핑크)',  shape: 'clover', base: '#FF38A4', cheek: '#FFB0CB', face: 'big',     desc: '핫핑크 플러시 클로버' },
+  'fluffy-beige':   { name: '베이지 복슬이',        shape: 'fluffy', base: '#E9D3B0', cheek: '#F7B6A6', face: 'happy',   window: '#F9EACD', desc: '보송보송 털뭉치' },
+  'hippo-purple':   { name: '보라 하마',            shape: 'hippo',  base: '#B183D9', cheek: '#FFB4CB', face: 'hippo',   snout: true, faceY: -0.10, desc: '통통 아기 하마' },
+  'cat-cream':      { name: '크림 고양이',          shape: 'cat',    base: '#F3E5CC', cheek: '#FBB3B8', face: 'happy',   whisker: true, desc: '작은 뾰족 귀 고양이' },
+  'tri-pink':       { name: '핫핑크 삼각형',        shape: 'tri',    base: '#FF2D8E', cheek: '#FFADC4', face: 'big',     desc: '둥근 삼각형' },
+  'circle-cream':   { name: '크림 I 동글이',        shape: 'circle', base: '#F1E2C6', mark: 'I',       desc: 'I 마크 동글이' },
+  'play-black':     { name: '블랙 플레이',          shape: 'square', base: '#2A2624', mark: 'play',    desc: '재생 심볼' },
+  'tri-blue':       { name: '블루 삼각형',          shape: 'tri',    base: '#2E8BF0', cheek: '#9FC4FF', face: 'white',   desc: '큰 눈 삼각형' },
+  'heart-red':      { name: '레드 하트',            shape: 'heart',  base: '#F2394A', cheek: '#FFB0BE', face: 'white',   crown: true, desc: '하트 + 금 왕관' },
+  'star-yellow':    { name: '옐로 스타',            shape: 'star',   base: '#FFC61A', cheek: '#FFC49E', face: 'wink',    crown: true, desc: '별 + 금 왕관' },
+};
+const AVATAR_IDS = Object.keys(AVATARS);
+const AVATAR_BY_PROVIDER = {
+  pickle: 'hippo-purple', vooy: 'cat-cream', instings: 'star-yellow', claude: 'heart-red',
+  gpt: 'clover-green', gemini: 'tri-blue', custom: 'fluffy-beige',
+};
+function defaultAvatarFor(provider) { return AVATAR_BY_PROVIDER[provider] || 'fluffy-beige'; }
+function avatarIdOf(a) {
+  const id = a && a.avatar;
+  return (id && AVATARS[id]) ? id : defaultAvatarFor(a && a.provider);
+}
+function avatarDefOf(a) {
+  const d = Object.assign({}, AVATARS[avatarIdOf(a)]);
+  d.id = avatarIdOf(a);
+  // 직접 입력 + 사용자가 기본값과 다른 색을 고른 경우에만 몸통 색을 바꾼다
+  if (a && a.provider === 'custom' && a.color && String(a.color).toLowerCase() !== String(PROVIDERS.custom.color).toLowerCase()) d.base = a.color;
+  return d;
+}
+const AV_ARM = {
+  clover: [0.84, 0.32], heart: [0.78, 0.26], tri: [0.62, 0.30], star: [0.74, 0.32],
+  fluffy: [0.86, 0.26], hippo: [0.84, 0.24], cat: [0.86, 0.24], circle: [0.90, 0.20], square: [0.92, 0.18],
+};
+const AV_BOT = { clover: 0.86, fluffy: 0.93, hippo: 0.92, cat: 0.92, circle: 0.94, square: 0.96, heart: 0.84, tri: 0.56, star: 0.82 };
+
+/* --- 실루엣 경로 (중심 cx,cy · 가로 rx · 세로 ry) --- */
+function avPath(c, shape, cx, cy, rx, ry) {
+  const N = 128;
+  c.beginPath();
+  if (shape === 'circle') { c.ellipse(cx, cy, rx, ry, 0, 0, TAU); return; }
+  if (shape === 'square') {
+    const n = 4.4, p = 2 / n;
+    for (let i = 0; i <= N; i++) {
+      const th = i / N * TAU, cs = Math.cos(th), sn = Math.sin(th);
+      const x = cx + rx * Math.sign(cs) * Math.pow(Math.abs(cs), p);
+      const y = cy + ry * Math.sign(sn) * Math.pow(Math.abs(sn), p);
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.closePath(); return;
+  }
+  if (shape === 'heart') {
+    const w = rx * 0.92, h = ry * 0.96;
+    c.moveTo(cx, cy + h * 0.88);
+    c.bezierCurveTo(cx - w * 1.22, cy + h * 0.12, cx - w * 1.02, cy - h * 0.92, cx - w * 0.40, cy - h * 0.68);
+    c.bezierCurveTo(cx - w * 0.16, cy - h * 0.56, cx - w * 0.05, cy - h * 0.36, cx, cy - h * 0.18);
+    c.bezierCurveTo(cx + w * 0.05, cy - h * 0.36, cx + w * 0.16, cy - h * 0.56, cx + w * 0.40, cy - h * 0.68);
+    c.bezierCurveTo(cx + w * 1.02, cy - h * 0.92, cx + w * 1.22, cy + h * 0.12, cx, cy + h * 0.88);
+    c.closePath(); return;
+  }
+  if (shape === 'star') {
+    const pts = [];
+    for (let i = 0; i < 10; i++) {
+      const ang = -Math.PI / 2 + i * Math.PI / 5, rr = (i % 2) ? 0.46 : 1;
+      pts.push([cx + Math.cos(ang) * rx * rr, cy + Math.sin(ang) * ry * rr]);
+    }
+    const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    const m0 = mid(pts[9], pts[0]);
+    c.moveTo(m0[0], m0[1]);
+    for (let i = 0; i < 10; i++) { const p = pts[i], q = pts[(i + 1) % 10], m = mid(p, q); c.quadraticCurveTo(p[0], p[1], m[0], m[1]); }
+    c.closePath(); return;
+  }
+  if (shape === 'tri') {
+    const pts = [];
+    for (let i = 0; i < 3; i++) { const ang = -Math.PI / 2 + i * TAU / 3; pts.push([cx + Math.cos(ang) * rx, cy + Math.sin(ang) * ry]); }
+    const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    const m0 = mid(pts[2], pts[0]);
+    c.moveTo(m0[0], m0[1]);
+    for (let i = 0; i < 3; i++) { const p = pts[i], q = pts[(i + 1) % 3], m = mid(p, q); c.quadraticCurveTo(p[0], p[1], m[0], m[1]); }
+    c.closePath(); return;
+  }
+  for (let i = 0; i <= N; i++) {
+    const th = i / N * TAU, cs = Math.cos(th), sn = Math.sin(th);
+    let kx = 1, ky = 1;
+    if (shape === 'clover') {
+      const k = 0.82 + 0.18 * Math.cos(4 * (th - Math.PI / 4));
+      kx = k; ky = k;
+    } else if (shape === 'fluffy') {
+      const k = 1 + 0.030 * Math.cos(17 * th) + 0.018 * Math.cos(9 * th + 0.7);
+      kx = k; ky = k;
+    } else if (shape === 'hippo') {
+      kx = 0.92 + 0.08 * sn - 0.02 * Math.abs(cs);
+      ky = 1;
+    } else if (shape === 'cat') {
+      kx = 0.94 + 0.05 * sn;
+      ky = 0.99 - 0.02 * sn;
+    }
+    const x = cx + cs * rx * kx, y = cy + sn * ry * ky;
+    i ? c.lineTo(x, y) : c.moveTo(x, y);
+  }
+  c.closePath();
+}
+
+/* --- 몸통 채색 (플러시 음영 + 림라이트) --- */
+function avFill(c, d, cx, cy, rx, ry, base) {
+  c.save();
+  avPath(c, d.shape, cx, cy, rx, ry);
+  const g = c.createRadialGradient(cx - rx * 0.38, cy - ry * 0.46, Math.max(0.6, rx * 0.05), cx + rx * 0.04, cy + ry * 0.16, Math.max(rx, ry) * 1.26);
+  g.addColorStop(0, shade(base, 0.40));
+  g.addColorStop(0.34, shade(base, 0.12));
+  g.addColorStop(0.70, shade(base, -0.08));
+  g.addColorStop(1, shade(base, -0.42));
+  c.fillStyle = g; c.fill();
+  c.clip();
+  const sh = c.createLinearGradient(0, cy + ry * 0.15, 0, cy + ry * 1.05);
+  sh.addColorStop(0, 'rgba(32,14,26,0)'); sh.addColorStop(1, 'rgba(32,14,26,.24)');
+  c.fillStyle = sh; c.fillRect(cx - rx * 1.4, cy - ry * 1.4, rx * 2.8, ry * 2.8);
+  c.lineWidth = Math.max(1, Math.min(rx, ry) * 0.075);
+  c.strokeStyle = 'rgba(255,255,255,.15)';
+  avPath(c, d.shape, cx, cy, rx * 0.955, ry * 0.955); c.stroke();
+  c.restore();
+}
+
+/* --- 팔다리 (화면 좌표 캡슐) --- */
+function avLimb(c, x0, y0, x1, y1, w, col) {
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1;
+  let nx = -dy / L, ny = dx / L;
+  if (nx + ny > 0) { nx = -nx; ny = -ny; }
+  const g = c.createLinearGradient(x0 + nx * w, y0 + ny * w, x0 - nx * w, y0 - ny * w);
+  g.addColorStop(0, shade(col, 0.30)); g.addColorStop(0.45, col); g.addColorStop(1, shade(col, -0.34));
+  c.save(); c.lineCap = 'round'; c.lineWidth = w * 2; c.strokeStyle = g;
+  c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); c.restore();
+}
+
+/* --- 귀 (몸 뒤) --- */
+function avEars(c, d, cx, cy, rx, ry, turn, back, base, R) {
+  const ex = turn * rx * 0.10;
+  const col = shade(base, -0.04);
+  if (d.shape === 'hippo') {
+    [-1, 1].forEach(sd => {
+      const x = cx + sd * rx * 0.66 + ex, y = cy - ry * 0.86;
+      c.beginPath(); c.ellipse(x, y, R * 0.215, R * 0.215, sd * 0.16, 0, TAU);
+      const g = c.createRadialGradient(x - R * 0.06, y - R * 0.08, R * 0.02, x, y, R * 0.24);
+      g.addColorStop(0, shade(col, 0.26)); g.addColorStop(1, shade(col, -0.30));
+      c.fillStyle = g; c.fill();
+      if (!back) { c.beginPath(); c.ellipse(x, y + R * 0.02, R * 0.10, R * 0.11, 0, 0, TAU); c.fillStyle = shade(base, -0.30); c.fill(); }
+    });
+  } else if (d.shape === 'cat') {
+    [-1, 1].forEach(sd => {
+      const x = cx + sd * rx * 0.56 + ex, y = cy - ry * 0.84;
+      c.save();
+      c.beginPath();
+      c.moveTo(x - R * 0.22, y + R * 0.22);
+      c.quadraticCurveTo(x - R * 0.18, y - R * 0.26, x + sd * R * 0.04, y - R * 0.30);
+      c.quadraticCurveTo(x + R * 0.21, y - R * 0.22, x + R * 0.22, y + R * 0.24);
+      c.closePath();
+      const g = c.createLinearGradient(x, y - R * 0.26, x, y + R * 0.22);
+      g.addColorStop(0, shade(col, 0.18)); g.addColorStop(1, shade(col, -0.20));
+      c.fillStyle = g; c.fill();
+      if (!back) {
+        c.beginPath();
+        c.moveTo(x - R * 0.09, y + R * 0.12);
+        c.quadraticCurveTo(x - R * 0.06, y - R * 0.12, x + sd * R * 0.01, y - R * 0.16);
+        c.quadraticCurveTo(x + R * 0.08, y - R * 0.06, x + R * 0.10, y + R * 0.14);
+        c.closePath(); c.fillStyle = 'rgba(246,168,178,.85)'; c.fill();
+      }
+      c.restore();
+    });
+  }
+}
+
+/* --- 금 왕관 --- */
+function avCrown(c, x, yBase, w, h, glow) {
+  c.save();
+  const L = x - w / 2, Rr = x + w / 2;
+  c.beginPath();
+  c.moveTo(L, yBase);
+  c.lineTo(L, yBase - h * 0.62);
+  c.lineTo(L + w * 0.20, yBase - h * 0.24);
+  c.lineTo(x, yBase - h * 1.0);
+  c.lineTo(Rr - w * 0.20, yBase - h * 0.24);
+  c.lineTo(Rr, yBase - h * 0.62);
+  c.lineTo(Rr, yBase);
+  c.closePath();
+  const g = c.createLinearGradient(L, yBase - h, Rr, yBase);
+  g.addColorStop(0, '#FFF4BE'); g.addColorStop(0.38, '#FFD24A'); g.addColorStop(1, '#C8861B');
+  c.fillStyle = g; c.fill();
+  c.lineWidth = Math.max(0.6, w * 0.02); c.strokeStyle = 'rgba(140,88,12,.55)'; c.stroke();
+  // 띠 + 보석
+  c.beginPath(); c.moveTo(L, yBase - h * 0.06); c.lineTo(Rr, yBase - h * 0.06);
+  c.lineTo(Rr, yBase - h * 0.34); c.lineTo(L, yBase - h * 0.34); c.closePath();
+  c.fillStyle = 'rgba(190,126,20,.9)'; c.fill();
+  c.beginPath(); c.arc(x, yBase - h * 0.20, w * 0.07, 0, TAU); c.fillStyle = '#8DF3FF'; c.fill();
+  // 꼭짓점 구슬
+  [[L, -0.62], [x, -1.0], [Rr, -0.62]].forEach(([px, py]) => {
+    c.beginPath(); c.arc(px, yBase + h * py, w * 0.065, 0, TAU);
+    const bg = c.createRadialGradient(px - w * 0.02, yBase + h * py - w * 0.02, 0, px, yBase + h * py, w * 0.08);
+    bg.addColorStop(0, '#FFF6CB'); bg.addColorStop(1, '#D79A24');
+    c.fillStyle = bg; c.fill();
+  });
+  if (glow) { c.globalAlpha = 0.35; drawGlow(x, yBase - h * 0.4, w * 1.2, '#FFD86B', 0.5); c.globalAlpha = 1; }
+  c.restore();
+}
+
+/* --- 얼굴 --- */
+function avFace(c, d, R, o) {
+  const f = d.face; if (!f) return;
+  const t = o.turn || 0, expr = o.expr || 'normal';
+  const sx = 1 - Math.abs(t) * 0.34;
+  const blink = o.blink == null ? 1 : o.blink;
+  const eyeDX = R * 0.30;
+  c.save();
+  c.translate(o.faceX, o.faceY);
+  c.scale(sx, 1);
+  // 볼터치
+  if (d.cheek && expr !== 'work') {
+    [-1, 1].forEach(sd => {
+      const bx = sd * R * 0.55, by = R * 0.20;
+      const cg = c.createRadialGradient(bx, by, R * 0.01, bx, by, R * 0.17);
+      cg.addColorStop(0, rgba(d.cheek, .92)); cg.addColorStop(0.45, rgba(d.cheek, .78)); cg.addColorStop(1, rgba(d.cheek, 0));
+      c.beginPath(); c.ellipse(bx, by, R * 0.17, R * 0.108, 0, 0, TAU);
+      c.fillStyle = cg; c.fill();
+    });
+  }
+  let style = f;
+  if (expr === 'joy') style = 'joy';
+  else if (expr === 'sleep') style = 'sleep';
+  else if (expr === 'work' && f !== 'hippo') style = 'focus';
+  const ink = '#3A2C34';
+  if (style === 'joy' || style === 'happy') {
+    [-1, 1].forEach(sd => {
+      c.beginPath(); c.arc(sd * eyeDX, R * 0.03, R * 0.155, Math.PI * 1.12, Math.PI * 1.88);
+      c.lineWidth = R * 0.062; c.lineCap = 'round'; c.strokeStyle = ink; c.stroke();
+    });
+  } else if (style === 'sleep') {
+    [-1, 1].forEach(sd => {
+      c.beginPath(); c.arc(sd * eyeDX, R * 0.0, R * 0.15, Math.PI * 0.14, Math.PI * 0.86);
+      c.lineWidth = R * 0.058; c.lineCap = 'round'; c.strokeStyle = ink; c.stroke();
+    });
+  } else if (style === 'squint' || style === 'wink') {
+    const drawSquint = (sd) => {
+      const ex = sd * eyeDX, ax = ex - sd * R * 0.085, bx = ex + sd * R * 0.105;
+      c.beginPath(); c.moveTo(bx, -R * 0.10); c.lineTo(ax, 0); c.lineTo(bx, R * 0.10);
+      c.lineWidth = R * 0.062; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = ink; c.stroke();
+    };
+    if (style === 'squint') { drawSquint(-1); drawSquint(1); }
+    else {
+      // 한쪽은 크게 뜬 흰 눈, 다른 쪽은 <
+      c.beginPath(); c.ellipse(-eyeDX, 0, R * 0.145, R * 0.155, 0, 0, TAU); c.fillStyle = '#FFFDF6'; c.fill();
+      c.beginPath(); c.arc(-eyeDX + R * 0.02, R * 0.01, R * 0.085, 0, TAU); c.fillStyle = '#20191C'; c.fill();
+      c.beginPath(); c.arc(-eyeDX + R * 0.045, -R * 0.03, R * 0.028, 0, TAU); c.fillStyle = '#ffffff'; c.fill();
+      drawSquint(1);
+    }
+  } else if (style === 'focus') {
+    [-1, 1].forEach(sd => {
+      c.beginPath(); c.ellipse(sd * eyeDX, R * 0.03, R * 0.115, R * 0.115 * blink, 0, 0, TAU); c.fillStyle = ink; c.fill();
+      if (blink > 0.5) { c.beginPath(); c.arc(sd * eyeDX - R * 0.04, -R * 0.01, R * 0.036, 0, TAU); c.fillStyle = '#ffffff'; c.fill(); }
+      c.beginPath();
+      c.moveTo(sd * eyeDX - sd * R * 0.10, -R * 0.20); c.lineTo(sd * eyeDX + sd * R * 0.09, -R * 0.14);
+      c.lineWidth = R * 0.045; c.lineCap = 'round'; c.strokeStyle = shade(d.base, -0.55); c.stroke();
+    });
+  } else if (style === 'white') {
+    [-1, 1].forEach(sd => {
+      c.beginPath(); c.ellipse(sd * eyeDX, 0, R * 0.150, R * 0.160 * blink, 0, 0, TAU); c.fillStyle = '#FFFDF6'; c.fill();
+      if (blink > 0.5) {
+        c.beginPath(); c.arc(sd * eyeDX + R * 0.015, R * 0.012, R * 0.088, 0, TAU); c.fillStyle = '#20191C'; c.fill();
+        c.beginPath(); c.arc(sd * eyeDX + R * 0.045, -R * 0.028, R * 0.030, 0, TAU); c.fillStyle = '#ffffff'; c.fill();
+      }
+    });
+  } else if (style === 'sparkle' || style === 'big') {
+    const er = style === 'sparkle' ? 0.145 : 0.128;
+    [-1, 1].forEach(sd => {
+      c.beginPath(); c.ellipse(sd * eyeDX, R * 0.02, R * er, R * (er + 0.02) * blink, 0, 0, TAU); c.fillStyle = ink; c.fill();
+      if (blink > 0.5) {
+        c.beginPath(); c.ellipse(sd * eyeDX - R * 0.04, -R * 0.035, R * 0.048, R * 0.042, -0.4, 0, TAU); c.fillStyle = '#ffffff'; c.fill();
+        c.beginPath(); c.arc(sd * eyeDX + R * 0.05, R * 0.06, R * 0.022, 0, TAU); c.fillStyle = 'rgba(255,255,255,.72)'; c.fill();
+      }
+    });
+    if (style === 'sparkle' && blink > 0.5) {
+      c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = R * 0.022;
+      [[-eyeDX - R * 0.10, -R * 0.15], [eyeDX + R * 0.10, -R * 0.13]].forEach(([sx2, sy2]) => {
+        c.beginPath(); c.moveTo(sx2 - R * 0.05, sy2); c.lineTo(sx2 + R * 0.05, sy2); c.moveTo(sx2, sy2 - R * 0.05); c.lineTo(sx2, sy2 + R * 0.05); c.stroke();
+      });
+    }
+  } else if (style === 'hippo') {
+    [-1, 1].forEach(sd => {
+      c.beginPath(); c.ellipse(sd * eyeDX, -R * 0.04, R * 0.125, R * 0.135 * blink, 0, 0, TAU); c.fillStyle = ink; c.fill();
+      if (blink > 0.5) { c.beginPath(); c.arc(sd * eyeDX - R * 0.04, -R * 0.08, R * 0.038, 0, TAU); c.fillStyle = '#ffffff'; c.fill(); }
+    });
+  }
+  // 입
+  const my = R * 0.26;
+  if (expr === 'work') {
+    c.beginPath(); c.moveTo(-R * 0.07, my - R * 0.02); c.lineTo(R * 0.07, my - R * 0.02);
+    c.lineWidth = R * 0.038; c.lineCap = 'round'; c.strokeStyle = ink; c.stroke();
+  } else if (expr === 'joy' || expr === 'sleep' || style === 'happy' || style === 'hippo') {
+    const bw = (style === 'hippo' ? R * 0.24 : R * 0.16), bh = (style === 'hippo' ? R * 0.17 : R * 0.12);
+    const cyM = my + (style === 'hippo' ? R * 0.26 : 0);
+    c.beginPath();
+    c.moveTo(-bw, cyM - bh * 0.3);
+    c.quadraticCurveTo(-bw * 0.9, cyM + bh, 0, cyM + bh);
+    c.quadraticCurveTo(bw * 0.9, cyM + bh, bw, cyM - bh * 0.3);
+    c.quadraticCurveTo(0, cyM - bh * 0.7, -bw, cyM - bh * 0.3);
+    c.closePath();
+    c.fillStyle = '#7A2B36'; c.fill();
+    c.beginPath(); c.ellipse(0, cyM + bh * 0.62, bw * 0.52, bh * 0.34, 0, 0, TAU); c.fillStyle = '#FF8FA3'; c.fill();
+    if (style === 'hippo') { c.beginPath(); c.rect(-bw * 0.55, cyM - bh * 0.34, bw * 1.1, bh * 0.20); c.fillStyle = '#FFF9EC'; c.fill(); }
+  } else if (expr === 'sleep') {
+    c.beginPath(); c.moveTo(-R * 0.05, my); c.quadraticCurveTo(0, my + R * 0.03, R * 0.05, my);
+    c.lineWidth = R * 0.035; c.lineCap = 'round'; c.strokeStyle = ink; c.stroke();
+  } else {
+    c.beginPath(); c.moveTo(-R * 0.085, my - R * 0.02); c.quadraticCurveTo(0, my + R * 0.075, R * 0.085, my - R * 0.02);
+    c.lineWidth = R * 0.042; c.lineCap = 'round'; c.strokeStyle = ink; c.stroke();
+  }
+  c.restore();
+}
+
+/* --- 마크 (I · 재생 심볼) --- */
+function avMark(c, d, R, o) {
+  if (!d.mark) return;
+  const x = o.faceX, y = o.faceY, t = o.turn || 0;
+  c.save();
+  c.translate(x, y);
+  c.scale(1 - Math.abs(t) * 0.55, 1);
+  if (d.mark === 'I') {
+    const ink = '#2B2521', w = R * 0.165, h = R * 0.74, bar = R * 0.40;
+    const g = c.createLinearGradient(-bar / 2, -h / 2, bar / 2, h / 2);
+    g.addColorStop(0, '#413931'); g.addColorStop(0.5, '#2A2420'); g.addColorStop(1, '#171412');
+    c.fillStyle = g;
+    c.beginPath(); c.roundRect(-w / 2, -h / 2, w, h, R * 0.03); c.fill();
+    c.beginPath(); c.roundRect(-bar / 2, -h / 2 - R * 0.055, bar, R * 0.115, R * 0.03); c.fill();
+    c.beginPath(); c.roundRect(-bar / 2, h / 2 - R * 0.06, bar, R * 0.115, R * 0.03); c.fill();
+  } else if (d.mark === 'play') {
+    const w = R * 0.24, h = R * 0.28;
+    c.beginPath();
+    c.moveTo(w, 0);
+    c.quadraticCurveTo(w * 0.18, -h * 0.58, -w * 0.78, -h);
+    c.quadraticCurveTo(-w * 0.55, 0, -w * 0.78, h);
+    c.quadraticCurveTo(w * 0.18, h * 0.58, w, 0);
+    c.closePath();
+    const g = c.createLinearGradient(-w, -h, w, h);
+    g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.55, '#F4F0E9'); g.addColorStop(1, '#D9D3C8');
+    c.fillStyle = g; c.fill();
+  }
+  c.restore();
+}
+
+/* --- 캐릭터 한 마리 (화면 좌표) --- */
+function avChar(c, d, cx, cy, rx, ry, o) {
+  o = o || {};
+  const base = o.base || d.base;
+  const R = Math.min(rx, ry);
+  const turn = o.turn || 0, back = !!o.back, t = o.t || 0;
+  const sitting = !!o.sitting, moving = !!o.moving;
+  const bot = AV_BOT[d.shape] != null ? AV_BOT[d.shape] : 0.9;
+  const faceX = cx + turn * rx * 0.24;
+  const faceY = cy + ry * ((d.faceY != null ? d.faceY : 0.0));
+  const legTop = cy + ry * bot;
+  const footY = o.footY != null ? o.footY : cy + ry * 1.05;
+  const armY = cy + ry * 0.05;
+
+  c.save();
+  // ---- 다리 ----
+  [-1, 1].forEach(sd => {
+    const lx = cx + sd * rx * 0.34;
+    const sw = moving ? Math.sin(t * 9 + sd * 1.6) * R * 0.07 : 0;
+    const fx2 = lx + sw + (sitting ? turn * rx * 0.10 : 0);
+    avLimb(c, lx, legTop - R * 0.02, fx2, footY - R * 0.08, R * 0.135, shade(base, -0.09));
+    c.beginPath(); c.ellipse(fx2 + sd * R * 0.01, footY - R * 0.05, R * 0.155, R * 0.10, 0, 0, TAU);
+    c.fillStyle = shade(base, -0.15); c.fill();
+  });
+  // ---- 팔 ----
+  const farSd = turn >= 0 ? -1 : 1;
+  const aP = AV_ARM[d.shape] || [0.84, 0.20];
+  const drawArm = (sd, alpha, col) => {
+    const shx = cx + sd * rx * (aP[0] - 0.08), shy = cy + ry * (aP[1] - 0.06);
+    let hx = cx + sd * rx * (aP[0] + 0.09), hy = cy + ry * (aP[1] + 0.18);
+    if (o.expr === 'joy') { hx = cx + sd * rx * (aP[0] + 0.06); hy = cy + ry * (aP[1] - 0.28); }
+    else if (o.expr === 'work') { hx = cx + sd * rx * (aP[0] - 0.10); hy = cy + ry * (aP[1] + 0.24); }
+    else if (moving) { hy += Math.sin(t * 9 + sd * 2) * R * 0.06; }
+    c.save(); c.globalAlpha = alpha;
+    avLimb(c, shx, shy, hx, hy, R * 0.115, col);
+    c.restore();
+  };
+  drawArm(farSd, 0.92, shade(base, -0.20));
+
+  // ---- 귀 · 몸통 ----
+  avEars(c, d, cx, cy, rx, ry, turn, back, base, R);
+  avFill(c, d, cx, cy, rx, ry, base);
+
+  // ---- 얼굴 판(복슬이) ----
+  if (!back && d.window) {
+    c.save();
+    c.beginPath(); c.ellipse(faceX, faceY + ry * 0.01, rx * 0.43, ry * 0.39, 0, 0, TAU);
+    const wg = c.createRadialGradient(faceX - rx * 0.12, faceY - ry * 0.14, rx * 0.05, faceX, faceY, rx * 0.52);
+    wg.addColorStop(0, shade(d.window, 0.22)); wg.addColorStop(0.72, d.window); wg.addColorStop(1, shade(d.window, -0.14));
+    c.fillStyle = wg; c.fill();
+    c.restore();
+  }
+  if (!back) {
+    // 하마 콧구멍
+    if (d.snout) {
+      c.save();
+      c.beginPath(); c.ellipse(faceX, faceY + R * 0.34, R * 0.48, R * 0.34, 0, 0, TAU);
+      const mg2 = c.createRadialGradient(faceX - R * 0.12, faceY + R * 0.24, R * 0.04, faceX, faceY + R * 0.34, R * 0.5);
+      mg2.addColorStop(0, shade(base, 0.26)); mg2.addColorStop(1, shade(base, -0.04));
+      c.fillStyle = mg2; c.fill();
+      [-1, 1].forEach(sd => {
+        c.beginPath(); c.ellipse(faceX + sd * R * 0.13, faceY + R * 0.15, R * 0.048, R * 0.034, sd * 0.2, 0, TAU);
+        c.fillStyle = shade(base, -0.44); c.fill();
+      });
+      c.restore();
+    }
+    const blinkPhase = Math.sin(t * 1.9 + (o.anim || 0) * 2.7);
+    const blink = (o.expr === 'sleep' || o.expr === 'joy') ? 1 : (blinkPhase > 0.955 ? 0.08 : 1);
+    avFace(c, d, R, { turn, expr: o.expr, faceX, faceY, blink });
+    avMark(c, d, R, { turn, faceX, faceY });
+    if (d.whisker) {
+      c.save(); c.globalAlpha = 0.8; c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = Math.max(0.7, R * 0.022);
+      [-1, 1].forEach(sd => {
+        [-0.05, 0.04].forEach((dy, i) => {
+          const bx = faceX + sd * R * 0.42, by = faceY + R * (0.22 + dy);
+          c.beginPath(); c.moveTo(bx, by); c.quadraticCurveTo(bx + sd * R * 0.24, by + (i ? R * 0.06 : -R * 0.04), bx + sd * R * 0.44, by + (i ? R * 0.12 : -R * 0.08)); c.stroke();
+        });
+      });
+      c.restore();
+    }
+  } else {
+    // 뒷모습 — 이음선 + 꼬리
+    c.save();
+    c.beginPath(); avPath(c, d.shape, cx, cy, rx * 0.98, ry * 0.98); c.clip();
+    c.beginPath(); c.moveTo(cx, cy - ry * 0.72);
+    c.lineWidth = Math.max(0.9, R * 0.05); c.strokeStyle = 'rgba(40,20,30,.10)'; c.stroke();
+    c.restore();
+    if (d.shape === 'hippo') {
+      c.beginPath(); c.arc(cx + turn * rx * 0.2, cy + ry * 0.60, R * 0.13, 0, TAU);
+      c.fillStyle = shade(base, -0.12); c.fill();
+      c.beginPath(); c.arc(cx + turn * rx * 0.2 - R * 0.03, cy + ry * 0.60 - R * 0.03, R * 0.06, 0, TAU);
+      c.fillStyle = shade(base, 0.14); c.fill();
+    }
+  }
+
+  // ---- 가까운 팔 ----
+  drawArm(-farSd, 1, base);
+
+  // ---- 왕관 ----
+  if (d.crown) {
+    const cw = R * 0.80, ch = R * 0.46;
+    const baseY = cy - ry * (d.shape === 'star' ? 0.40 : d.shape === 'heart' ? 0.42 : 0.60);
+    avCrown(c, cx + turn * rx * 0.06, baseY, cw, ch, true);
+  }
+  c.restore();
+}
+
+/* --- 아이콘용 작은 초상 --- */
+function drawAvatarPortrait(c, d, w, h) {
+  const s = Math.min(w, h);
+  const R = s * 0.285;
+  const cx = w / 2, cy = h * 0.50;
+  const ry = R * (d.shape === 'tri' ? 1.16 : d.shape === 'star' ? 1.02 : 1.0);
+  avChar(c, d, cx, cy, R, ry, { turn: 0, expr: 'normal', t: 0, anim: 0 });
+}
+const AV_ICON_CACHE = new Map();
+function avatarIconURL(a, size) {
+  size = size || 44;
+  const d = avatarDefOf(a);
+  const key = d.id + '|' + (a && a.provider === 'custom' ? String(a.color) : '') + '|' + size;
+  if (AV_ICON_CACHE.has(key)) return AV_ICON_CACHE.get(key);
+  let url = '';
+  try {
+    const cv = document.createElement('canvas');
+    const px = Math.round(size * 2);
+    cv.width = px; cv.height = px;
+    const c2 = cv.getContext('2d');
+    drawAvatarPortrait(c2, d, px, px);
+    url = cv.toDataURL('image/png');
+  } catch (e) { }
+  AV_ICON_CACHE.set(key, url);
+  return url;
+}
+
+/* --- 3D 오피스 에이전트 --- */
 function drawAgent3(a) {
   if (!a.enabled) return;
   const sitting = a.state === 'meeting' || a.state === 'rest' || a.state === 'work';
   const moving = a.state === 'moving';
   const dep = depthOf(a.x, a.y, 0.5);
   if (dep < 0.3) return;
-  floorDisc(a.x, a.y, 0.34, 'rgba(0,0,0,.32)');
+  floorDisc(a.x, a.y, 0.36, 'rgba(0,0,0,.34)');
   // 지시를 받아 작업 중인 에이전트 — 바닥 진행 링
   const wj = newestJob(a);
   if (wj) {
@@ -2557,419 +3063,99 @@ function drawAgent3(a) {
     poly(ring, null, rgba(a.color, .95), 2.2);
   }
   q(dep, () => {
-    const L = chibiLook(a);
+    const d = avatarDefOf(a);
     const fx = Math.cos(a.facing), fy = Math.sin(a.facing);
-    const px = -fy, py = fx;                       // 캐릭터 기준 오른쪽
+    const px = -fy, py = fx;
     let tcx = CAMPOS.x - a.x, tcy = CAMPOS.y - a.y;
     const tl = Math.hypot(tcx, tcy) || 1; tcx /= tl; tcy /= tl;
-    const faceDot = fx * tcx + fy * tcy;           // 1 = 카메라 쪽
-    const turn = clamp(fx * V3.r.x + fy * V3.r.y, -1, 1);   // 화면 좌우(+오른쪽)
-    const back = faceDot < -0.22;
-    const sideView = Math.abs(turn) > 0.5;
+    const faceDot = fx * tcx + fy * tcy;
+    const turn = clamp(fx * V3.r.x + fy * V3.r.y, -1, 1);
+    const back = faceDot < -0.18;
+    const baseZ = sitting ? 0.86 : 0.50;     // 앉으면 좌판 위(0.44)에 몸이 놓인다
+    const gp = proj(a.x, a.y, sitting ? 0.26 : 0);
+    const bp = proj(a.x, a.y, baseZ);
+    if (!gp || !bp) return;
+    const R = 0.40 * bp.s;
+    if (R < 1.6) return;
+    const bob = moving ? Math.abs(Math.sin(a.walk)) * 0.05 : Math.sin(S.time * 1.5 + a.anim) * 0.008;
+    const cx = bp.x;
+    const cy = bp.y - bob * bp.s;
+    const rx = R * (1 - Math.abs(turn) * 0.22);
+    const ry = R * (d.shape === 'tri' ? 1.16 : d.shape === 'star' ? 1.02 : 1.0);
+    const rocking = moving ? Math.sin(a.walk) * 0.05 : 0;
 
-    const bob = moving ? Math.abs(Math.sin(a.walk)) * 0.055 : Math.sin(S.time * 1.6 + a.anim) * 0.008;
-    const baseZ = (sitting ? 0.30 : 0) + bob;
-    const legH = sitting ? 0.09 : 0.2;
-    const hipZ = baseZ + legH;
-    const bodyZ0 = hipZ - 0.05, bodyZ1 = bodyZ0 + 0.37;
-    const headR = 0.238;
-    const headZ = bodyZ1 + headR * 0.64;
-    const headTop = headZ + headR;
+    ctx3.save();
+    if (rocking) { ctx3.translate(cx, gp.y); ctx3.rotate(rocking); ctx3.translate(-cx, -gp.y); }
+    const expr = a.state === 'rest' ? 'sleep' : (a.bubble || a.state === 'meeting') ? 'joy' : a.state === 'work' ? 'work' : 'normal';
+    const working = a.state === 'work';
 
-    const hp = proj(a.x, a.y, headZ);
-    const bt = proj(a.x, a.y, bodyZ1), bb = proj(a.x, a.y, bodyZ0);
-    if (!hp || !bt || !bb) return;
-    const sH = hp.s;
-    const R = headR * sH;
-    if (R < 1.4) return;
+    // 노트북은 앞쪽 → 등 돌리면 먼저(몸 뒤) 그린다
+    if (working && back) drawLaptop3(a, cx, cy, R);
 
-    const typing = (a.state === 'work' || a.state === 'meeting');
-    const swing = moving ? Math.sin(a.walk) * 0.1 : 0;
-
-    /* ===== 꼬리 (몸 뒤) ===== */
-    const tailSide = (turn > 0.05 ? -1 : turn < -0.05 ? 1 : ((Math.floor(a.anim * 10) % 2) ? 1 : -1));
-    const tailBase = proj(a.x - fx * 0.12 + px * 0.06 * tailSide, a.y - fy * 0.12 + py * 0.06 * tailSide, hipZ + 0.02);
-    if (tailBase) {
-      const wag = Math.sin(S.time * 2.4 + a.anim) * 0.28;
-      if (L.tail === 'long') {
-        const tx = tailBase.x + tailSide * R * 0.92 + wag * R * 0.3;
-        const tyy = tailBase.y - R * 0.66 + Math.abs(wag) * R * 0.1;
-        ctx3.save();
-        ctx3.beginPath(); ctx3.moveTo(tailBase.x, tailBase.y);
-        ctx3.quadraticCurveTo(tailBase.x + tailSide * R * 0.66, tailBase.y - R * 0.06, tx, tyy);
-        ctx3.lineWidth = Math.max(1.4, R * 0.27); ctx3.lineCap = 'round';
-        ctx3.strokeStyle = shade(L.fur, -0.12); ctx3.stroke();
-        ctx3.restore();
-        cBall(tx, tyy, R * 0.19, R * 0.19, L.fur2, 0, 0.35, -0.35);
-      } else {
-        cBall(tailBase.x + tailSide * R * 0.52, tailBase.y - R * 0.04, R * 0.25, R * 0.23, L.fur2, 0, 0.4, -0.35);
-      }
-    }
-
-    /* ===== 다리 & 발 ===== */
-    const footCol = (L.kind === 'duck') ? L.bill : shade(L.top2, -0.42);
-    const legCol = shade(L.fur2, -0.08);
-    [-1, 1].forEach(sd => {
-      const off = 0.085 * sd;
-      const lx = a.x + px * off, ly = a.y + py * off;
-      if (sitting) {
-        const hip2 = [lx, ly, hipZ + 0.01];
-        const knee = [lx + fx * 0.155, ly + fy * 0.155, hipZ - 0.165];
-        const foot = [lx + fx * 0.2, ly + fy * 0.2, baseZ * 0.1 + 0.03];
-        cLimb(hip2, knee, 0.068, legCol);
-        cLimb(knee, foot, 0.058, legCol);
-        const fp = proj(foot[0], foot[1], foot[2]);
-        if (fp) cBall(fp.x, fp.y, 0.078 * fp.s, 0.05 * fp.s, footCol, 0, 0.2, -0.5);
-      } else {
-        const fwx = fx * swing * sd, fwy = fy * swing * sd;
-        cLimb([lx, ly, hipZ], [lx + fwx + fx * 0.01, ly + fwy + fy * 0.01, baseZ + 0.045], 0.062, legCol);
-        const fp = proj(lx + fwx + fx * 0.01, ly + fwy + fy * 0.01, baseZ + 0.03);
-        if (fp) cBall(fp.x, fp.y, 0.075 * fp.s, 0.052 * fp.s, footCol, 0, 0.2, -0.5);
-      }
+    avChar(ctx3, d, cx, cy, rx, ry, {
+      turn, back, expr, t: S.time, anim: a.anim, sitting, moving,
+      base: d.base, footY: Math.max(gp.y, cy + R * 0.95),
     });
 
-    /* ===== 팔 (먼 팔 → 몸 → 가까운 팔) ===== */
-    const arms = [-1, 1].map(sd => {
-      const sh = [a.x + px * 0.165 * sd, a.y + py * 0.165 * sd, bodyZ1 - 0.055];
-      let hz, fwd;
-      if (typing) { fwd = 0.185 + Math.sin(a.typing + sd * 1.7) * 0.012; hz = bodyZ0 + 0.145 + Math.sin(a.typing * 1.1 + sd * 2.1) * 0.026; }
-      else if (moving) { fwd = Math.sin(a.walk + (sd > 0 ? Math.PI : 0)) * 0.15; hz = hipZ + 0.055; }
-      else { fwd = 0.035; hz = hipZ + 0.06 + Math.sin(S.time * 1.6 + a.anim + sd) * 0.01; }
-      const hd = [a.x + px * 0.228 * sd + fx * fwd, a.y + py * 0.228 * sd + fy * fwd, hz];
-      const el = [(sh[0] + hd[0]) / 2 + px * 0.028 * sd, (sh[1] + hd[1]) / 2 + py * 0.028 * sd, (sh[2] + hd[2]) / 2 - 0.015];
-      return { sd, sh, el, hd, d: depthOf(sh[0], sh[1], sh[2]) };
-    }).sort((p, q2) => q2.d - p.d);
-    const drawArm = (arm) => {
-      cLimb(arm.sh, arm.el, 0.06, L.sleeve);
-      cLimb(arm.el, arm.hd, 0.057, L.sleeve);
-      const hpp = proj(arm.hd[0], arm.hd[1], arm.hd[2]);
-      if (hpp) cBall(hpp.x, hpp.y, 0.064 * hpp.s, 0.06 * hpp.s, L.fur, 0, 0.42, -0.34);
-    };
-    drawArm(arms[0]);
+    if (working && !back) drawLaptop3(a, cx, cy, R);
 
-    /* ===== 몸통 ===== */
-    const wt = 0.148 * sH, wb = 0.202 * sH;
-    cTorso(bb.x, bt.y, bb.y, wt, wb, L.top);
-    // 배(크림) 패치 + 옷 디테일
-    ctx3.save();
-    cTorsoPath(bb.x, bt.y, bb.y, wt, wb); ctx3.clip();
-    const bh = Math.max(2, bb.y - bt.y);
-    const bellyX = bb.x + turn * R * 0.05;
-    const showBelly = !L.hood && !L.tie && !L.scarf && !L.collar;
-    if (showBelly) cBall(bellyX, bb.y - bh * 0.34, wb * 0.46, bh * 0.22, shade(L.top, 0.3), 0, 0.4, -0.14);
-    if (L.hood) {
-      // 후드티 주머니
+    // 휴식 — zZ
+    if (a.state === 'rest') {
       ctx3.save();
-      ctx3.beginPath();
-      const py2 = bb.y - bh * 0.30, pw2 = wb * 0.56;
-      ctx3.moveTo(bb.x - pw2, py2 - bh * 0.1);
-      ctx3.quadraticCurveTo(bb.x - pw2 * 0.95, py2 + bh * 0.16, bb.x, py2 + bh * 0.19);
-      ctx3.quadraticCurveTo(bb.x + pw2 * 0.95, py2 + bh * 0.16, bb.x + pw2, py2 - bh * 0.1);
-      ctx3.lineTo(bb.x + pw2, py2 - bh * 0.15);
-      ctx3.lineTo(bb.x - pw2, py2 - bh * 0.15);
-      ctx3.closePath();
-      ctx3.fillStyle = shade(L.top, -0.1); ctx3.fill();
-      ctx3.lineWidth = Math.max(0.8, wb * 0.06); ctx3.strokeStyle = shade(L.top, -0.2); ctx3.stroke();
-      ctx3.restore();
-      // 후드 끈
-      [-1, 1].forEach(sd => {
+      ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
+      for (let i = 0; i < 3; i++) {
+        const ph = (S.time * 0.42 + i * 0.33) % 1;
+        const zx = cx + R * (0.58 + ph * 0.34) + turn * R * 0.10;
+        const zy = cy - R * (0.92 + ph * 0.62);
+        ctx3.globalAlpha = Math.min(1, 1.4 * (1 - ph));
+        ctx3.font = `800 ${Math.round(R * (0.30 + ph * 0.26))}px -apple-system,"Noto Sans KR",sans-serif`;
+        ctx3.lineWidth = Math.max(1.5, R * 0.07); ctx3.strokeStyle = 'rgba(255,255,255,.85)';
+        ctx3.strokeText('z', zx, zy);
+        ctx3.fillStyle = '#6FA9D8';
+        ctx3.fillText('z', zx, zy);
+      }
+      ctx3.globalAlpha = 1; ctx3.restore();
+    }
+    // 대화·회의 — 반짝임
+    if (a.bubble) {
+      const sp = 0.6 + 0.4 * Math.sin(S.time * 5 + a.anim);
+      [[-0.95, -0.62], [0.92, -0.78], [-0.70, -0.95]].forEach(([dx2, dy2], i) => {
+        ctx3.save(); ctx3.globalAlpha = 0.55 + sp * 0.4;
+        const sx2 = cx + dx2 * R, sy2 = cy + dy2 * R, r2 = R * (0.07 + i * 0.015);
         ctx3.beginPath();
-        ctx3.moveTo(bb.x + sd * wb * 0.22, bt.y + bh * 0.1);
-        ctx3.lineTo(bb.x + sd * wb * 0.24, bt.y + bh * 0.42);
-        ctx3.lineWidth = Math.max(0.9, wb * 0.055); ctx3.strokeStyle = L.trim; ctx3.lineCap = 'round'; ctx3.stroke();
-        cBall(bb.x + sd * wb * 0.24, bt.y + bh * 0.46, wb * 0.07, wb * 0.07, L.trim);
+        for (let k = 0; k < 8; k++) { const ang = -Math.PI / 2 + k * TAU / 8, rr = k % 2 ? r2 * 0.4 : r2; const x2 = sx2 + Math.cos(ang) * rr, y2 = sy2 + Math.sin(ang) * rr; k ? ctx3.lineTo(x2, y2) : ctx3.moveTo(x2, y2); }
+        ctx3.closePath(); ctx3.fillStyle = '#FFE9A8'; ctx3.fill(); ctx3.restore();
       });
     }
-    if (L.tie) {
-      const knotY = bt.y + bh * 0.2;
-      ctx3.beginPath(); ctx3.moveTo(bb.x - wb * 0.19, knotY); ctx3.lineTo(bb.x + wb * 0.19, knotY); ctx3.lineTo(bb.x, knotY + bh * 0.12); ctx3.closePath();
-      ctx3.fillStyle = L.top2; ctx3.fill();
-      ctx3.beginPath(); ctx3.moveTo(bb.x - wb * 0.17, knotY + bh * 0.12); ctx3.lineTo(bb.x + wb * 0.17, knotY + bh * 0.12);
-      ctx3.lineTo(bb.x + wb * 0.08, knotY + bh * 0.6); ctx3.lineTo(bb.x, knotY + bh * 0.52); ctx3.lineTo(bb.x - wb * 0.08, knotY + bh * 0.6); ctx3.closePath();
-      ctx3.fillStyle = shade(L.top2, 0.1); ctx3.fill();
-    }
-    if (L.collar) {
-      const cy2 = bt.y + bh * 0.17;
-      [-1, 1].forEach(sd => {
-        ctx3.beginPath(); ctx3.moveTo(bb.x, cy2);
-        ctx3.lineTo(bb.x + sd * wb * 0.34, cy2 - bh * 0.06); ctx3.lineTo(bb.x + sd * wb * 0.3, cy2 + bh * 0.15); ctx3.closePath();
-        ctx3.fillStyle = L.trim; ctx3.fill();
-      });
-      cBall(bb.x, cy2, wb * 0.1, wb * 0.1, L.accent);
-    }
-    if (L.kind === 'bear' || L.kind === 'duck') {
-      [[0.3, 0], [0.42, 1]].forEach(([t2]) => {
-        cBall(bb.x + turn * R * 0.05, bt.y + bh * (t2 + 0.22), wb * 0.055, wb * 0.055, L.accent, 0, 0.5, -0.3);
-      });
+
+    // 총괄 — 하트·별은 원래 왕관이라 후광으로 구분
+    if (a.lead) {
+      const hpz = baseZ + (d.shape === 'star' ? 0.52 : 0.46);
+      const hp = proj(a.x, a.y, hpz + 0.22);
+      if (hp) {
+        const r = 0.17 * hp.s;
+        const pulse = 0.7 + 0.3 * Math.sin(S.time * 2.4 + a.anim);
+        ctx3.save();
+        ctx3.globalAlpha = 0.55 * pulse;
+        const hg = ctx3.createRadialGradient(hp.x, hp.y, r * 0.2, hp.x, hp.y, r * 1.9);
+        hg.addColorStop(0, 'rgba(255,225,150,.95)'); hg.addColorStop(1, 'rgba(255,215,120,0)');
+        ctx3.fillStyle = hg; ctx3.beginPath(); ctx3.arc(hp.x, hp.y, r * 1.9, 0, TAU); ctx3.fill();
+        ctx3.globalAlpha = 1;
+        ctx3.lineWidth = Math.max(1, r * 0.16);
+        ctx3.strokeStyle = 'rgba(255,230,160,.9)';
+        ctx3.beginPath(); ctx3.ellipse(hp.x, hp.y, r * 0.78, r * 0.26, 0, 0, TAU); ctx3.stroke();
+        ctx3.restore();
+
+      }
     }
     ctx3.restore();
 
-    /* ===== 후드 (목 뒤) ===== */
-    if (L.hood && !back) {
-      ctx3.save();
-      ctx3.beginPath(); ctx3.ellipse(bb.x, bt.y + 2, wb * 0.92, Math.max(2, bh * 0.16), 0, 0, TAU);
-      ctx3.fillStyle = shade(L.top2, -0.05); ctx3.fill(); ctx3.restore();
-    }
-
-    /* ===== 머리 뒤 요소 (귀/후드) ===== */
-    const earDX = R * 0.62, earY = hp.y - R * 0.72;
-    const earShift = turn * R * 0.1;
-    const earCol = back ? shade(L.fur, -0.1) : L.fur;
-    if (L.kind === 'bear' || L.kind === 'duck') {
-      [-1, 1].forEach(sd => {
-        const ex = hp.x + sd * earDX * 1.04 + earShift, ey = earY - R * 0.1;
-        cBall(ex, ey, R * 0.34, R * 0.34, shade(L.fur, -0.13), 0, 0.4, -0.4);
-        ctx3.save(); ctx3.globalAlpha = 0.3;
-        ctx3.beginPath(); ctx3.arc(ex, ey, R * 0.335, Math.PI * 0.72, Math.PI * 1.72);
-        ctx3.strokeStyle = shade(L.fur, -0.6); ctx3.lineWidth = Math.max(0.7, R * 0.035); ctx3.stroke();
-        ctx3.restore();
-        if (!back) cBall(ex, ey + R * 0.04, R * 0.19, R * 0.18, L.inner, 0, 0.28, -0.22);
-      });
-    } else if (L.kind === 'cat' || L.kind === 'fox') {
-      [-1, 1].forEach(sd => {
-        const ex = hp.x + sd * earDX * 0.92 + earShift, ey = earY - R * 0.24;
-        ctx3.save();
-        ctx3.beginPath();
-        ctx3.moveTo(ex - R * 0.3, ey + R * 0.3);
-        ctx3.quadraticCurveTo(ex - R * 0.16, ey - R * 0.5, ex + sd * R * 0.14, ey - R * 0.4);
-        ctx3.quadraticCurveTo(ex + R * 0.27, ey - R * 0.18, ex + R * 0.3, ey + R * 0.34);
-        ctx3.closePath();
-        const eg = ctx3.createLinearGradient(ex, ey - R * 0.4, ex, ey + R * 0.3);
-        eg.addColorStop(0, shade(earCol, 0.2)); eg.addColorStop(1, shade(earCol, -0.3));
-        ctx3.fillStyle = eg; ctx3.fill();
-        if (!back) {
-          ctx3.beginPath();
-          ctx3.moveTo(ex - R * 0.15, ey + R * 0.22);
-          ctx3.quadraticCurveTo(ex - R * 0.06, ey - R * 0.22, ex + sd * R * 0.08, ey - R * 0.18);
-          ctx3.quadraticCurveTo(ex + R * 0.13, ey - R * 0.02, ex + R * 0.15, ey + R * 0.24);
-          ctx3.closePath(); ctx3.fillStyle = L.inner; ctx3.fill();
-        }
-        ctx3.restore();
-      });
-    } else if (L.kind === 'dog') {
-      [-1, 1].forEach(sd => {
-        const ex = hp.x + sd * (R * 0.86) + earShift, ey = hp.y - R * 0.18;
-        cBall(ex, ey, R * 0.24, R * 0.38, shade(earCol, -0.16), sd * 0.32);
-      });
-    } else if (L.kind === 'rabbit') {
-      [-1, 1].forEach(sd => {
-        const ex = hp.x + sd * (R * 0.34) + earShift, ey = hp.y - R * 1.18;
-        cBall(ex, ey, R * 0.17, R * 0.56, earCol, sd * 0.16);
-        if (!back) cBall(ex, ey + R * 0.02, R * 0.085, R * 0.38, L.inner, sd * 0.16, 0.2, -0.2);
-      });
-    }
-
-    /* ===== 머리 ===== */
-    cBall(hp.x, hp.y, R, R, L.fur, 0, 0.48, -0.4);
-    cRim(hp.x, hp.y, R, R, 0.2);
-    cSpec(hp.x - R * 0.36, hp.y - R * 0.42, R * 0.2, R * 0.13, 0.45, -0.5);
-
-    /* ===== 뒷통수 ===== */
-    if (back) {
-      if (L.hood) {
-        cBall(hp.x + turn * R * 0.05, hp.y - R * 0.02, R * 1.04, R * 1.02, L.top2, 0, 0.32, -0.44);
-        ctx3.save();
-        ctx3.beginPath(); ctx3.ellipse(hp.x, hp.y + R * 0.04, R * 0.72, R * 0.6, 0, 0, TAU);
-        ctx3.strokeStyle = shade(L.top2, -0.32); ctx3.lineWidth = R * 0.1; ctx3.stroke();
-        ctx3.restore();
-        cBall(hp.x, hp.y + R * 0.42, R * 0.3, R * 0.2, L.fur, 0, 0.3, -0.2);
-      } else {
-        cBall(hp.x, hp.y + R * 0.3, R * 0.82, R * 0.7, L.fur2, 0, 0.2, -0.2);
-        cBall(hp.x, hp.y + R * 0.66, R * 0.3, R * 0.17, shade(L.fur, 0.16));
-      }
-    }
-
-    /* ===== 얼굴 ===== */
-    if (!back) {
-      const fa = clamp((faceDot + 0.22) / 0.3, 0, 1);
-      ctx3.save();
-      ctx3.beginPath(); ctx3.arc(hp.x, hp.y, R * 0.98, 0, TAU); ctx3.clip();
-      // 앞머리 숱
-      if (L.kind !== 'duck') {
-        const fg = ctx3.createLinearGradient(0, hp.y - R * 1.02, 0, hp.y - R * 0.1);
-        fg.addColorStop(0, shade(L.fur, -0.19)); fg.addColorStop(1, shade(L.fur, -0.02));
-        ctx3.beginPath();
-        ctx3.moveTo(hp.x - R * 1.05, hp.y - R * 0.2);
-        ctx3.quadraticCurveTo(hp.x - R * 0.62, hp.y - R * 0.58, hp.x - R * 0.14, hp.y - R * 0.38);
-        ctx3.quadraticCurveTo(hp.x + R * 0.34, hp.y - R * 0.2, hp.x + R * 1.05, hp.y - R * 0.52);
-        ctx3.lineTo(hp.x + R * 1.05, hp.y - R * 1.05);
-        ctx3.lineTo(hp.x - R * 1.05, hp.y - R * 1.05);
-        ctx3.closePath(); ctx3.fillStyle = fg; ctx3.fill();
-      }
-      const ox = hp.x + turn * R * 0.13;
-      const eyeY = hp.y + R * 0.02;
-      const eyeDX = R * 0.355 * (1 - Math.abs(turn) * 0.2);
-      const blinkPhase = Math.sin(S.time * 1.9 + a.anim * 2.7);
-      const blink = (!moving && blinkPhase > 0.955) ? 0.08 : 1;
-      const eyeRx = R * 0.145, eyeRy = R * 0.185 * blink;
-
-      // 볼터치
-      [-1, 1].forEach(sd => {
-        ctx3.save(); ctx3.globalAlpha = fa * (sideView ? 0.75 : 1);
-        ctx3.beginPath(); ctx3.ellipse(ox + sd * R * 0.6, eyeY + R * 0.28, R * 0.19, R * 0.13, 0, 0, TAU);
-        ctx3.fillStyle = L.cheek; ctx3.fill();
-        ctx3.globalAlpha = 1; ctx3.restore();
-      });
-
-      // 주둥이 패치 (오리 제외)
-      if (L.kind !== 'duck') {
-        cBall(ox, hp.y + R * 0.34, R * 0.4, R * 0.29, shade(L.fur, 0.34), 0, 0.3, -0.14);
-      }
-
-      // 눈
-      [-1, 1].forEach(sd => {
-        const ex = ox + sd * eyeDX;
-        const vis = sideView ? (sd === (turn > 0 ? 1 : -1) ? 1 : 0.55) : 1;
-        ctx3.save(); ctx3.globalAlpha = fa * vis;
-        ctx3.beginPath(); ctx3.ellipse(ex, eyeY, eyeRx, eyeRy, 0, 0, TAU);
-        ctx3.fillStyle = '#3b2f3d'; ctx3.fill();
-        if (blink > 0.5) {
-          ctx3.beginPath(); ctx3.ellipse(ex - eyeRx * 0.3, eyeY - eyeRy * 0.3, eyeRx * 0.42, eyeRy * 0.4, 0, 0, TAU);
-          ctx3.fillStyle = '#ffffff'; ctx3.fill();
-          ctx3.beginPath(); ctx3.arc(ex + eyeRx * 0.32, eyeY + eyeRy * 0.36, eyeRx * 0.24, 0, TAU);
-          ctx3.fillStyle = 'rgba(255,255,255,.55)'; ctx3.fill();
-        } else {
-          ctx3.beginPath(); ctx3.moveTo(ex - eyeRx, eyeY); ctx3.quadraticCurveTo(ex, eyeY + eyeRx * 0.7, ex + eyeRx, eyeY);
-          ctx3.lineWidth = Math.max(1, R * 0.05); ctx3.strokeStyle = '#3b2f3d'; ctx3.stroke();
-        }
-        ctx3.restore();
-        // 눈썹
-        ctx3.save(); ctx3.globalAlpha = fa * 0.85;
-        ctx3.beginPath(); ctx3.moveTo(ex - eyeRx * 0.95, eyeY - R * 0.28);
-        ctx3.quadraticCurveTo(ex, eyeY - R * 0.37, ex + eyeRx * 0.95, eyeY - R * 0.26);
-        ctx3.lineWidth = Math.max(1, R * 0.052); ctx3.lineCap = 'round';
-        ctx3.strokeStyle = shade(L.fur, -0.52); ctx3.stroke();
-        ctx3.restore();
-      });
-
-      // 코 & 입
-      if (L.kind === 'duck') {
-        cBall(ox, hp.y + R * 0.3, R * 0.3, R * 0.16, L.bill, 0, 0.5, -0.3);
-        ctx3.beginPath(); ctx3.moveTo(ox - R * 0.24, hp.y + R * 0.3); ctx3.quadraticCurveTo(ox, hp.y + R * 0.38, ox + R * 0.24, hp.y + R * 0.3);
-        ctx3.lineWidth = Math.max(1, R * 0.035); ctx3.strokeStyle = shade(L.bill, -0.45); ctx3.stroke();
-      } else {
-        const noseCol = (L.kind === 'cat' || L.kind === 'rabbit') ? '#f08fa8' : 'rgba(74,52,60,.9)';
-        ctx3.beginPath();
-        ctx3.moveTo(ox - R * 0.085, hp.y + R * 0.27);
-        ctx3.quadraticCurveTo(ox, hp.y + R * 0.21, ox + R * 0.085, hp.y + R * 0.27);
-        ctx3.quadraticCurveTo(ox, hp.y + R * 0.38, ox - R * 0.085, hp.y + R * 0.27);
-        ctx3.fillStyle = noseCol; ctx3.fill();
-        ctx3.beginPath();
-        ctx3.moveTo(ox - R * 0.115, hp.y + R * 0.4);
-        ctx3.quadraticCurveTo(ox - R * 0.05, hp.y + R * 0.47, ox, hp.y + R * 0.38);
-        ctx3.quadraticCurveTo(ox + R * 0.05, hp.y + R * 0.47, ox + R * 0.115, hp.y + R * 0.4);
-        ctx3.lineWidth = Math.max(1, R * 0.042); ctx3.lineCap = 'round'; ctx3.strokeStyle = 'rgba(74,52,60,.72)'; ctx3.stroke();
-      }
-
-      // 수염 (고양이/여우)
-      if (L.kind === 'cat' || L.kind === 'fox') {
-        ctx3.save(); ctx3.globalAlpha = fa * 0.5; ctx3.lineWidth = Math.max(0.8, R * 0.026); ctx3.strokeStyle = '#ffffff';
-        [-1, 1].forEach(sd => {
-          [-0.06, 0.02, 0.1].forEach((dy, i) => {
-            const bx2 = ox + sd * R * 0.42, by2 = hp.y + R * (0.36 + dy);
-            ctx3.beginPath(); ctx3.moveTo(bx2, by2);
-            ctx3.quadraticCurveTo(bx2 + sd * R * 0.26, by2 + R * (i - 1) * 0.1, bx2 + sd * R * 0.46, by2 + R * (i - 1) * 0.16);
-            ctx3.stroke();
-          });
-        });
-        ctx3.restore();
-      }
-
-      // 안경
-      if (L.glasses) {
-        ctx3.save();
-        ctx3.lineWidth = Math.max(1, R * 0.055); ctx3.strokeStyle = 'rgba(66,48,38,.92)';
-        [-1, 1].forEach(sd => {
-          const ex = ox + sd * eyeDX;
-          ctx3.beginPath(); ctx3.arc(ex, eyeY - R * 0.02, R * 0.27, 0, TAU); ctx3.stroke();
-        });
-        ctx3.beginPath(); ctx3.moveTo(ox - eyeDX + R * 0.26, eyeY - R * 0.04); ctx3.lineTo(ox + eyeDX - R * 0.26, eyeY - R * 0.04); ctx3.stroke();
-        [-1, 1].forEach(sd => {
-          ctx3.beginPath(); ctx3.moveTo(ox + sd * (eyeDX + R * 0.26), eyeY - R * 0.05); ctx3.lineTo(ox + sd * R * 0.9, eyeY - R * 0.16); ctx3.stroke();
-        });
-        ctx3.restore();
-      }
-      ctx3.restore();   // 머리 클립 해제
-
-      // 스카프 (부이)
-      if (L.scarf) {
-        ctx3.save();
-        ctx3.beginPath(); ctx3.ellipse(hp.x, hp.y + R * 0.94, R * 0.44, R * 0.11, 0, 0, TAU);
-        ctx3.fillStyle = shade(L.accent, -0.24); ctx3.fill();
-        ctx3.restore();
-        const kx = hp.x + turn * R * 0.3;
-        cBall(kx, hp.y + R * 1.02, R * 0.13, R * 0.11, L.accent, 0, 0.45, -0.3);
-        // 늘어뜨린 스카프 자락
-        ctx3.save();
-        ctx3.beginPath();
-        ctx3.moveTo(kx - R * 0.11, hp.y + R * 1.02);
-        ctx3.quadraticCurveTo(kx - R * 0.2, hp.y + R * 1.3, kx - R * 0.06, hp.y + R * 1.52);
-        ctx3.lineTo(kx + R * 0.1, hp.y + R * 1.46);
-        ctx3.quadraticCurveTo(kx + R * 0.02, hp.y + R * 1.24, kx + R * 0.11, hp.y + R * 1.04);
-        ctx3.closePath();
-        const sg = ctx3.createLinearGradient(kx - R * 0.2, hp.y + R, kx + R * 0.15, hp.y + R * 1.5);
-        sg.addColorStop(0, shade(L.accent, 0.12)); sg.addColorStop(1, shade(L.accent, -0.3));
-        ctx3.fillStyle = sg; ctx3.fill();
-        ctx3.restore();
-      }
-      // 왕관
-      // (아래에서 그림)
-    }
-
-    /* ===== 헤드셋 (부이) ===== */
-    if (L.headset) {
-      ctx3.save();
-      ctx3.beginPath(); ctx3.arc(hp.x, hp.y - R * 0.04, R * 0.99, Math.PI * 1.14, Math.PI * 1.86);
-      ctx3.lineWidth = Math.max(1, R * 0.075); ctx3.strokeStyle = '#26343b'; ctx3.lineCap = 'round'; ctx3.stroke();
-      [-1, 1].forEach(sd => {
-        const cxp = hp.x + sd * R * 0.93, cyp = hp.y + R * 0.06;
-        cBall(cxp, cyp, R * 0.19, R * 0.24, '#2b3a40', 0, 0.3, -0.4);
-        ctx3.beginPath(); ctx3.arc(cxp, cyp, R * 0.1, 0, TAU); ctx3.fillStyle = L.accent; ctx3.fill();
-        drawGlow(cxp, cyp, R * 0.42, L.glow, 0.45);
-      });
-      ctx3.restore();
-    }
-
-    /* ===== 앞머리 숱 / 별핀 / 새싹 / 왕관 ===== */
-    if (L.tuft) {
-      ctx3.save();
-      [-0.26, 0, 0.26].forEach((dx, i) => {
-        const bx2 = hp.x + dx * R + turn * R * 0.06;
-        cBall(bx2, hp.y - R * (0.92 + (i === 1 ? 0.12 : 0)), R * 0.1, R * 0.2, shade(L.fur, -0.22), dx * 0.4);
-      });
-      ctx3.restore();
-    }
-    if (L.star) {
-      const sx = hp.x - R * 0.52, sy = hp.y - R * 1.06;
-      ctx3.save();
-      ctx3.beginPath();
-      for (let i = 0; i < 8; i++) {
-        const ang = -Math.PI / 2 + i * TAU / 8, rr = (i % 2 === 0) ? R * 0.22 : R * 0.085;
-        if (i === 0) ctx3.moveTo(sx + Math.cos(ang) * rr, sy + Math.sin(ang) * rr);
-        else ctx3.lineTo(sx + Math.cos(ang) * rr, sy + Math.sin(ang) * rr);
-      }
-      ctx3.closePath(); ctx3.fillStyle = '#ffd451'; ctx3.fill();
-      ctx3.lineWidth = Math.max(0.7, R * 0.025); ctx3.strokeStyle = '#d99b1e'; ctx3.stroke();
-      ctx3.beginPath(); ctx3.arc(sx - R * 0.03, sy - R * 0.04, R * 0.045, 0, TAU); ctx3.fillStyle = 'rgba(255,255,255,.9)'; ctx3.fill();
-      drawGlow(sx, sy, R * 0.6, '#ffe98a', 0.35);
-      ctx3.restore();
-    }
-    if (L.sprout) {
-      const sway = Math.sin(S.time * 1.6 + a.anim) * 0.1;
-      const bx2 = hp.x + turn * R * 0.1 - R * 0.46, by2 = hp.y - R * 0.9;
-      const tx2 = bx2 + sway * R * 0.5 - R * 0.1, ty2 = by2 - R * 0.46;
-      ctx3.save();
-      ctx3.beginPath(); ctx3.moveTo(bx2, by2); ctx3.quadraticCurveTo(bx2 + sway * R * 0.2, by2 - R * 0.28, tx2, ty2);
-      ctx3.lineWidth = Math.max(1.2, R * 0.1); ctx3.lineCap = 'round'; ctx3.strokeStyle = '#6fae4f'; ctx3.stroke();
-      ctx3.restore();
-      cBall(tx2 - R * 0.17, ty2 - R * 0.03, R * 0.26, R * 0.15, '#9cd96a', -0.45);
-      cBall(tx2 + R * 0.19, ty2 - R * 0.13, R * 0.24, R * 0.14, '#bdea8c', 0.5);
-    }
-    if (a.lead) {
-      const cpz = headTop + 0.02;
-      const cp = proj(a.x, a.y, cpz);
+    // 왕관이 없는 캐릭터만 금 왕관을 머리 위에 얹는다
+    if (a.lead && !d.crown) {
+      const topZ = baseZ + (d.shape === 'tri' ? 0.44 : 0.50);
+      const cp = proj(a.x, a.y, topZ);
       if (cp) {
-        const r = 0.135 * cp.s;
+        const r = 0.125 * cp.s;
         ctx3.save();
         ctx3.beginPath();
         ctx3.moveTo(cp.x - r, cp.y + r * 0.42);
@@ -2988,22 +3174,21 @@ function drawAgent3(a) {
         ctx3.beginPath(); ctx3.ellipse(cp.x, cp.y + r * 0.36, r * 0.94, r * 0.19, 0, 0, TAU);
         ctx3.fillStyle = '#e7b23c'; ctx3.fill();
         ctx3.beginPath(); ctx3.arc(cp.x, cp.y + r * 0.3, r * 0.14, 0, TAU); ctx3.fillStyle = '#8df3ff'; ctx3.fill();
-        ctx3.beginPath(); ctx3.arc(cp.x - r * 0.72, cp.y + r * 0.1, r * 0.09, 0, TAU); ctx3.fillStyle = 'rgba(255,255,255,.85)'; ctx3.fill();
         drawGlow(cp.x, cp.y, r * 1.5, '#ffd86b', 0.35);
         ctx3.restore();
       }
     }
-    drawArm(arms[1]);
 
     /* ===== 말풍선 ===== */
     if (a.bubble) {
-      const bp = proj(a.x, a.y, headTop + 0.42);
-      if (bp) {
+      const bubbleZ = baseZ + (d.crown ? 0.98 : 0.86);
+      const bp2 = proj(a.x, a.y, bubbleZ);
+      if (bp2) {
         ctx3.save();
         const text = a.bubble.text.length > 24 ? a.bubble.text.slice(0, 23) + '…' : a.bubble.text;
         ctx3.font = '600 11.5px -apple-system, "Noto Sans KR", sans-serif';
         const w = ctx3.measureText(text).width + 18, h = 24;
-        const bx = clamp(bp.x - w / 2, 6, CW - w - 6), by = bp.y - 34;
+        const bx = clamp(bp2.x - w / 2, 6, CW - w - 6), by = bp2.y - 34;
         ctx3.fillStyle = 'rgba(26,22,18,.95)'; ctx3.strokeStyle = rgba(a.color, .6); ctx3.lineWidth = 1;
         roundRect(ctx3, bx, by, w, h, 8); ctx3.fill(); ctx3.stroke();
         ctx3.beginPath(); ctx3.moveTo(bx + w / 2 - 5, by + h); ctx3.lineTo(bx + w / 2, by + h + 6); ctx3.lineTo(bx + w / 2 + 5, by + h);
@@ -3014,6 +3199,54 @@ function drawAgent3(a) {
       }
     }
   });
+}
+
+/* --- 작업 중 노트북 (은색 · 무릎 앞) --- */
+function drawLaptop3(a, cx, cy, R) {
+  const w = R * 1.02, h = R * 0.60;
+  const y = cy + R * 0.50;
+  ctx3.save();
+  // 받침(키보드) — 짧은 사다리꼴
+  const bh = R * 0.20, bw = w * 1.14;
+  ctx3.beginPath();
+  ctx3.moveTo(cx - bw / 2, y + h * 0.34);
+  ctx3.lineTo(cx + bw / 2, y + h * 0.34);
+  ctx3.lineTo(cx + bw * 0.40, y + h * 0.34 + bh);
+  ctx3.lineTo(cx - bw * 0.40, y + h * 0.34 + bh);
+  ctx3.closePath();
+  const bg2 = ctx3.createLinearGradient(0, y + h * 0.34, 0, y + h * 0.34 + bh);
+  bg2.addColorStop(0, '#efece6'); bg2.addColorStop(1, '#bdb6ab');
+  ctx3.fillStyle = bg2; ctx3.fill();
+  // 화면 뒤판 (둥근 사각 · 은색)
+  const x0 = cx - w / 2, y0 = y - h / 2;
+  ctx3.beginPath(); roundRect(ctx3, x0, y0, w, h, R * 0.075);
+  const lg = ctx3.createLinearGradient(x0, y0, x0 + w, y0 + h);
+  lg.addColorStop(0, '#fdfbf6'); lg.addColorStop(0.45, '#e6e1d8'); lg.addColorStop(1, '#aaa39a');
+  ctx3.fillStyle = lg; ctx3.fill();
+  ctx3.lineWidth = Math.max(0.7, R * 0.022); ctx3.strokeStyle = 'rgba(120,112,104,.55)'; ctx3.stroke();
+  // 안쪽 테두리 + 로고
+  ctx3.beginPath(); roundRect(ctx3, x0 + w * 0.06, y0 + h * 0.08, w * 0.88, h * 0.84, R * 0.05);
+  ctx3.lineWidth = Math.max(0.6, R * 0.015); ctx3.strokeStyle = 'rgba(150,142,132,.45)'; ctx3.stroke();
+  ctx3.beginPath(); ctx3.arc(cx, y + h * 0.02, R * 0.055, 0, TAU);
+  ctx3.fillStyle = 'rgba(128,122,114,.55)'; ctx3.fill();
+  ctx3.restore();
+}
+
+/* --- 13종 한눈에 (검증용) --- */
+function avatarSheetCanvas(scale) {
+  const cell = 150 * (scale || 1), cols = 7, rows = Math.ceil(AVATAR_IDS.length / cols);
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(cell * cols); cv.height = Math.round(cell * rows + 8);
+  const c = cv.getContext('2d');
+  c.fillStyle = '#f7ecdf'; c.fillRect(0, 0, cv.width, cv.height);
+  AVATAR_IDS.forEach((id, i) => {
+    const x = (i % cols) * cell + cell / 2, y = Math.floor(i / cols) * cell + 10;
+    const d = Object.assign({}, AVATARS[id], { id });
+    avChar(c, d, x, y + cell * 0.10, cell * 0.29, cell * 0.29 * (d.shape === 'tri' ? 1.16 : 1), { turn: 0, expr: 'normal', t: 0 });
+    c.fillStyle = '#5a463c'; c.font = `600 ${Math.round(cell * 0.085)}px sans-serif`; c.textAlign = 'center';
+    c.fillText(d.name, x, y + cell * 0.83);
+  });
+  return cv;
 }
 
 function roundRect(c, x, y, w, h, r) {
@@ -3041,7 +3274,8 @@ function drawLabels3() {
   const order = S.agents.filter(a => a.enabled).slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
   order.forEach((a, i) => {
     // 옆자리 이름표끼리 겹치지 않도록 위아래로 엇갈리게
-    const p = proj(a.x, a.y, 1.16);
+    const seated = a.state === 'meeting' || a.state === 'rest' || a.state === 'work';
+    const p = proj(a.x, a.y, seated ? 1.50 : 1.06);
     if (!p) return;
     const pY = p.y - (i % 3) * 20;
     const isSel = S.selected === a.id;
@@ -5803,14 +6037,14 @@ function toast(msg) {
 /* ---------------- rendering: chrome ---------------- */
 function avatarHTML(a) {
   const pv = providerOf(a);
-  return `<div class="av" style="background:linear-gradient(160deg,${shade(a.color, .25)},${a.color});color:#241a10" title="${esc(a.name)} · ${esc(pv.name)}">${esc(pv.icon)}</div>`;
+  return `<div class="av" style="background:linear-gradient(160deg,${shade(a.color, .32)},${shade(a.color, -.18)});overflow:hidden;padding:0" title="${esc(a.name)} · ${esc(pv.name)} · ${esc(AVATARS[avatarIdOf(a)].name)}"><img src="${avatarIconURL(a, 48)}" alt="" style="width:118%;height:118%;object-fit:contain"></div>`;
 }
 function renderStrip() {
   const on = S.agents.filter(a => a.enabled);
   const strip = document.getElementById('agentStrip');
   if (strip) {
     const show = S.agents.slice(0, 6);
-    strip.innerHTML = show.map(a => `<div class="av" style="background:linear-gradient(160deg,${shade(a.color, .25)},${a.color});color:#241a10;opacity:${a.enabled ? 1 : .35}" title="${esc(a.name)} · ${esc(providerOf(a).name)} · 응답 ${esc(intervalLabel(a.interval))}">${esc(providerOf(a).icon)}</div>`).join('')
+    strip.innerHTML = show.map(a => `<div class="av" style="background:linear-gradient(160deg,${shade(a.color, .30)},${shade(a.color, -.16)});opacity:${a.enabled ? 1 : .35};overflow:hidden;padding:0" title="${esc(a.name)} · ${esc(providerOf(a).name)} · ${esc(AVATARS[avatarIdOf(a)].name)} · 응답 ${esc(intervalLabel(a.interval))}"><img src="${avatarIconURL(a, 40)}" alt="" style="width:118%;height:118%;object-fit:contain"></div>`).join('')
       + (S.agents.length > 6 ? `<div class="av more">+${S.agents.length - 6}</div>` : '');
   }
   const c1 = document.getElementById('onCount'); if (c1) c1.innerHTML = `<b>${on.length}</b> ON`;
@@ -5943,7 +6177,30 @@ function setView(v) {
 function openModal(id) { const m = document.getElementById(id); if (m) m.classList.add('on'); }
 function closeModals() { $$('.modal').forEach(m => m.classList.remove('on')); }
 
-const AG = { editingId: null, provider: 'claude', conn: 'manual', method: 'post', interval: 5, role: '개발', color: PROVIDERS.claude.color, confirmDel: false, lead: false };
+const AG = { editingId: null, provider: 'claude', conn: 'manual', method: 'post', interval: 5, role: '개발', color: PROVIDERS.claude.color, avatar: 'heart-red', confirmDel: false, lead: false };
+
+/* --- 캐릭터 외형 13종 픽커 --- */
+function avatarPickerHTML(sel) {
+  return AVATAR_IDS.map(id => {
+    const d = AVATARS[id];
+    return `<button type="button" data-avpick="${id}" class="${id === sel ? 'sel' : ''}" title="${esc(d.name)} · ${esc(d.desc || '')}"><canvas width="104" height="104" data-avcanvas="${id}"></canvas><span class="an">${esc(d.name)}</span></button>`;
+  }).join('');
+}
+function avatarChipsHTML(a) {
+  const cur = avatarIdOf(a);
+  return `<div class="avpick avrow" title="캐릭터 외형 13종">` + AVATAR_IDS.map(id =>
+    `<button type="button" data-av="${id}" data-av-for="${a.id}" class="${id === cur ? 'sel' : ''}" title="${esc(AVATARS[id].name)}"><canvas width="68" height="68" data-avcanvas="${id}"></canvas></button>`).join('') + `</div>`;
+}
+function paintAvatarsIn(root) {
+  if (!root) return;
+  root.querySelectorAll('canvas[data-avcanvas]').forEach(cv => {
+    const id = cv.dataset.avcanvas;
+    const d = Object.assign({}, AVATARS[id], { id });
+    const c2 = cv.getContext('2d');
+    c2.clearRect(0, 0, cv.width, cv.height);
+    drawAvatarPortrait(c2, d, cv.width, cv.height);
+  });
+}
 
 function agentModalHTML() {
   // 프리셋
@@ -5954,6 +6211,9 @@ function agentModalHTML() {
       <span class="pb">${esc(pv.brand)}</span>
     </button>`).join('');
   document.getElementById('agPresets').innerHTML = presets;
+  // 캐릭터 외형
+  const avBox = document.getElementById('agAvatars');
+  if (avBox) { avBox.innerHTML = avatarPickerHTML(AG.avatar); paintAvatarsIn(avBox); }
   // 역할
   document.getElementById('agRoles').innerHTML = Object.keys(ROLES).map(r =>
     `<button data-role="${r}" class="${AG.role === r ? 'sel' : ''}">${ROLES[r].icon} ${r}</button>`).join('');
@@ -5997,6 +6257,7 @@ function openAgentModal(agent, prefill) {
   AG.interval = agent ? agent.interval : 5;
   AG.role = agent ? agent.role : (prefill && prefill.role ? prefill.role : pv.role);
   AG.color = agent ? agent.color : pv.color;
+  AG.avatar = agent ? avatarIdOf(agent) : defaultAvatarFor(pv.id);
   AG.lead = agent ? !!agent.lead : false;
   document.getElementById('agTitle').textContent = agent ? '에이전트 편집' : '에이전트 추가';
   document.getElementById('agName').value = agent ? agent.name : ((prefill && prefill.name) || '');
@@ -6030,6 +6291,7 @@ function saveAgentForm() {
   if (existing) {
     existing.name = name; existing.role = role; existing.desc = desc;
     existing.provider = pv.id; existing.icon = pv.icon; existing.color = AG.color;
+    existing.avatar = AG.avatar || avatarIdOf(existing);
     existing.conn = AG.conn; existing.endpoint = endpoint; existing.method = method; existing.apiKey = apiKey;
     existing.interval = Number(AG.interval); existing.model = pv.model;
     if (AG.lead) S.agents.forEach(x => { x.lead = x.id === existing.id; });
@@ -6040,7 +6302,7 @@ function saveAgentForm() {
     if (existing.lead) addMessage(S.activeRoom, 'sys', { text: `👑 ${name} 이(가) 총괄 에이전트로 지정되었습니다. @${name} 로 지시하면 팀원에게 하위 지시를 냅니다.` });
   } else {
     const a = addAgent({
-      name, role, color: AG.color, provider: pv.id, icon: pv.icon, desc,
+      name, role, color: AG.color, provider: pv.id, icon: pv.icon, desc, avatar: AG.avatar,
       conn: AG.conn, endpoint, method, apiKey, interval: Number(AG.interval), tag: role === '총괄' ? '비서' : '봇', seat: room, lead: AG.lead,
     }, { x: 8.0, y: 10.25, seatKind: room });
     if (a.lead) S.agents.forEach(x => { x.lead = x.id === a.id; });
@@ -6062,6 +6324,7 @@ function buildAgentModal() {
     const prev = PROVIDERS[AG.provider];
     AG.provider = pv.id; AG.color = pv.color;
     if (!AG.editingId) {
+      AG.avatar = defaultAvatarFor(pv.id);
       const nm = document.getElementById('agName');
       if (!nm.value.trim() || nm.value.trim() === prev.name) nm.value = pv.name === '직접 입력' ? '' : pv.name;
       AG.role = pv.role;
@@ -6090,6 +6353,11 @@ function buildAgentModal() {
     const b = e.target.closest('[data-interval]'); if (!b) return;
     AG.interval = Number(b.dataset.interval); agentModalHTML();
   };
+  const agAv = document.getElementById('agAvatars');
+  if (agAv) agAv.onclick = e => {
+    const b = e.target.closest('[data-avpick]'); if (!b) return;
+    AG.avatar = b.dataset.avpick; agentModalHTML();
+  };
   document.getElementById('agColors').onclick = e => {
     const b = e.target.closest('[data-color]'); if (!b) return;
     AG.color = b.dataset.color; agentModalHTML();
@@ -6117,6 +6385,17 @@ function buildAgentModal() {
   };
   // 모달 열기 버튼 (전역)
   document.addEventListener('click', e => {
+    const av = e.target.closest('[data-av][data-av-for]');
+    if (av) {
+      const a = S.agents.find(x => x.id === av.dataset.avFor);
+      if (a && AVATARS[av.dataset.av]) {
+        a.avatar = av.dataset.av; save();
+        if (typeof renderBots === 'function') renderBots();
+        showAgentCard(a);
+        toast('외형 변경 · ' + AVATARS[a.avatar].name);
+      }
+      return;
+    }
     const b = e.target.closest('[data-add-agent]');
     if (b) { openAgentModal(null); }
   });
@@ -6190,10 +6469,10 @@ function bindCamera() {
   const hit = (e) => {
     const r = stage.getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
-    let best = null, bd = 34;
+    let best = null, bd = 42;
     for (const a of S.agents) {
       if (!a.enabled) continue;
-      const p = proj(a.x, a.y, 0.55); if (!p) continue;
+      const p = proj(a.x, a.y, (a.state === 'meeting' || a.state === 'rest' || a.state === 'work') ? 0.86 : 0.48); if (!p) continue;
       const d = Math.hypot(p.x - mx, p.y - my);
       if (d < bd) { bd = d; best = a; }
     }
@@ -6232,14 +6511,17 @@ function showAgentCard(a) {
   const j = newestJob(a);
   el.dataset.pendingClock = j ? '1' : '0';
   el.innerHTML = `<div class="who">
-      <div class="av" style="background:linear-gradient(160deg,${shade(a.color, .25)},${a.color});color:#241a10">${esc(pv.icon)}</div>
+      <div class="av" style="background:linear-gradient(160deg,${shade(a.color, .32)},${shade(a.color, -.18)});overflow:hidden;padding:0"><img src="${avatarIconURL(a, 56)}" alt="" style="width:118%;height:118%;object-fit:contain"></div>
       <div><div class="nm">${esc(a.name)}${a.lead ? ' 👑' : ''}</div><div class="rl">${esc(pv.name)} · ${esc(a.role)}</div></div>
     </div>
     <div class="chips2">
       ${a.lead ? '<span class="tag sec" style="border:1px solid rgba(246,214,168,.4);color:#f6d6a8">👑 총괄</span>' : ''}
       <span class="tag" style="color:${shade(pv.color, .3)};border-color:${rgba(pv.color, .45)}">⏱ 응답 ${esc(intervalLabel(a.interval))}</span>
       <span class="tag">${esc(connLabel(a))}</span>
+      <span class="tag">${esc(AVATARS[avatarIdOf(a)].name)}</span>
     </div>
+    <div class="hintline" style="margin:9px 0 2px;color:#8b8074">캐릭터 외형</div>
+    ${avatarChipsHTML(a)}
     ${a.conn === 'webhook' && a.endpoint ? `<div class="hintline" style="margin:0 0 7px;font:11px/1.5 ui-monospace,monospace;color:#8b8074;word-break:break-all">${esc(a.endpoint)}</div>` : ''}
     <div class="st"><span class="dot" style="background:${a.enabled ? '#79d3a2' : '#8b8074'}"></span> ${room} · ${st}${j ? ` · <b data-clock style="color:#f0c469">⚡ ${jobClock(j)}</b>` : ''}</div>
     <div class="acts">
@@ -6252,6 +6534,7 @@ function showAgentCard(a) {
       <button class="btn sm" data-edit="${a.id}">✎ 편집</button>
       <button class="btn sm" data-del="${a.id}">🗑 삭제</button>
     </div>`;
+  paintAvatarsIn(el);
 }
 
 /* ---------------- boot ---------------- */
